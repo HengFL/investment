@@ -178,6 +178,10 @@ function SummaryCard({ label, value, icon, delay }) {
 }
 
 function StockCard({ stock, index }) {
+  const [logoError, setLogoError] = useState(false);
+  const ticker = stock["ชื่อหุ้น"];
+  const logoUrl = `https://assets.parqet.com/logos/symbol/${ticker}?format=png`;
+
   return (
     <motion.div 
       className="glass-card stock-card"
@@ -187,8 +191,17 @@ function StockCard({ stock, index }) {
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ delay: index * 0.03 }}
     >
-      <div className="stock-icon">
-        {stock["ชื่อหุ้น"]}
+      <div className="stock-icon" style={{ overflow: 'hidden' }}>
+        {!logoError ? (
+          <img 
+            src={logoUrl} 
+            alt={ticker} 
+            onError={() => setLogoError(true)}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }}
+          />
+        ) : (
+          <span style={{ fontSize: '0.8rem' }}>{ticker.substring(0, 2)}</span>
+        )}
       </div>
       
       <div className="stock-info">
