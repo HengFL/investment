@@ -331,19 +331,19 @@ function App() {
           numValue={summary.totalRemainingTarget}
         />
         <SummaryCard 
-          label="ยอดซื้อรวมทั้งหมด" 
+          label="ยอดซื้อทั้งหมด" 
           value={formatCurrency(summary.totalBuyAmount)} 
           icon={<DollarSign size={20} color="var(--success)" />}
           delay={0.5}
         />
         <SummaryCard 
-          label="ยอดขายรวมทั้งหมด" 
+          label="ยอดขายทั้งหมด" 
           value={formatCurrency(summary.totalSellAmount)} 
           icon={<DollarSign size={20} color="var(--error)" />}
           delay={0.6}
         />
         <SummaryCard 
-          label="ยอดกำไรรวมทั้งหมด" 
+          label="ยอดกำไรทั้งหมด" 
           value={formatCurrency(summary.totalProfitSum)} 
           icon={<TrendingUp size={20} color={summary.totalProfitSum >= 0 ? "var(--success)" : "var(--error)"} />}
           delay={0.7}
