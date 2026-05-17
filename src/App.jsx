@@ -224,9 +224,9 @@ function App() {
     // Total Remaining Target (Need to calculate per item then sum)
     const totalRemainingTarget = mainTabData.reduce((acc, item) => {
       const targetPrice = parseFloat(item["ราคาตั้งซื้อ ($)"]) || 0;
-      if (targetPrice > 0) {
+      if (item.port !== 'Trade' && targetPrice > 0) {
         const targetAmount = calculateTargetAmount(item["วันที่กำหนด"], item["ราคาตั้งซื้อ ($)"]);
-        const remainingTarget = targetAmount - (parseFloat(item["ยอดซื้อ ($)"]) || 0);
+        const remainingTarget = targetAmount - (parseFloat(item["ยอดซื้อ ($)"]) || 0) + (parseFloat(item["ยอดขาย ($)"]) || 0);
         return acc + remainingTarget;
       }
       return acc;
@@ -629,7 +629,9 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
 
   const targetPrice = parseFloat(stock["ราคาตั้งซื้อ ($)"]) || 0;
   const targetAmount = targetPrice > 0 ? calculateTargetAmount(stock["วันที่กำหนด"], stock["ราคาตั้งซื้อ ($)"]) : 0;
-  const remainingTarget = targetPrice > 0 ? targetAmount - (parseFloat(stock["ยอดซื้อ ($)"]) || 0) : 0;
+  const remainingTarget = (stock.port === 'Trade' || targetPrice <= 0)
+    ? 0
+    : targetAmount - (parseFloat(stock["ยอดซื้อ ($)"]) || 0) + (parseFloat(stock["ยอดขาย ($)"]) || 0);
   const totalProfit = stock["สถานะ"] === "ขายแล้ว"
     ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
     : 0;
@@ -774,11 +776,23 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
         console.error(e);
       }
     }
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return '';
+  });
+  const [lastSellDate, setLastSellDate] = useState(() => {
+    if (stock["วันที่ขายล่าสุด"]) {
+      try {
+        const date = new Date(stock["วันที่ขายล่าสุด"]);
+        if (!isNaN(date.getTime())) {
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, '0');
+          const d = String(date.getDate()).padStart(2, '0');
+          return `${y}-${m}-${d}`;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return '';
   });
   const [buyAmount, setBuyAmount] = useState(() => {
     return stock["ยอดซื้อ ($)"] !== undefined && stock["ยอดซื้อ ($)"] !== null ? stock["ยอดซื้อ ($)"] : '';
@@ -796,29 +810,27 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
   const [status, setStatus] = useState('idle'); // 'idle' | 'success' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
 
-  const handleDividendChange = (val) => {
-    setDividendAmount(val);
-    const parsed = parseFloat(val);
-    if (!isNaN(parsed) && parsed > 0) {
-      setTaxAmount((parsed * 0.15).toFixed(2));
-    } else {
-      setTaxAmount('');
-    }
-  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setStatus('idle');
+
+    const getOrNull = (val) => {
+      const parsed = parseFloat(val);
+      return isNaN(parsed) || parsed === 0 ? null : parsed;
+    };
     
     const requestData = {
       sheet_name: stock.port || 'Extra',
       symbol: stock["ชื่อหุ้น"],
-      last_buy_date: lastBuyDate,
-      buy_amount: parseFloat(buyAmount) || 0,
-      sell_amount: parseFloat(sellAmount) || 0,
-      dividend_amount: parseFloat(dividendAmount) || 0,
-      tax_amount: parseFloat(taxAmount) || 0
+      last_buy_date: lastBuyDate || null,
+      last_sell_date: lastSellDate || null,
+      buy_amount: getOrNull(buyAmount),
+      sell_amount: getOrNull(sellAmount),
+      dividend_amount: getOrNull(dividendAmount),
+      tax_amount: getOrNull(taxAmount)
     };
 
     try {
@@ -906,7 +918,7 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
                   </span>
                 </div>
                 <div>
-                  <h3 className="modal-title">อัปเดตข้อมูล {stock["ชื่อหุ้น"]}</h3>
+                  <h3 className="modal-title">อัปเดต {stock["ชื่อหุ้น"]}</h3>
                   <p className="modal-subtitle">{stock["ชื่อบริษัท"]} • พอร์ต: <span className="highlight-tag">{stock.port}</span></p>
                 </div>
               </div>
@@ -916,23 +928,36 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
             </div>
 
             <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">
-                  <Calendar size={14} style={{ marginRight: '4px' }} />
-                  วันที่ดำเนินการ (Date)
-                </label>
-                <input 
-                  type="date" 
-                  className="form-input" 
-                  value={lastBuyDate} 
-                  onChange={(e) => setLastBuyDate(e.target.value)}
-                  required 
-                />
+              <div className="form-row-2">
+                <div className="form-group">
+                  <label className="form-label">
+                    <Calendar size={14} style={{ marginRight: '4px' }} />
+                    วันที่ซื้อล่าสุด
+                  </label>
+                  <input 
+                    type="date" 
+                    className="form-input" 
+                    value={lastBuyDate} 
+                    onChange={(e) => setLastBuyDate(e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">
+                    <Calendar size={14} style={{ marginRight: '4px' }} />
+                    วันที่ขายล่าสุด
+                  </label>
+                  <input 
+                    type="date" 
+                    className="form-input" 
+                    value={lastSellDate} 
+                    onChange={(e) => setLastSellDate(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="form-row-2">
                 <div className="form-group">
-                  <label className="form-label">ยอดซื้อ ($) (Buy Amount)</label>
+                  <label className="form-label">ยอดซื้อ ($)</label>
                   <input 
                     type="number" 
                     step="0.01" 
@@ -944,7 +969,7 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">ยอดขาย ($) (Sell Amount)</label>
+                  <label className="form-label">ยอดขาย ($)</label>
                   <input 
                     type="number" 
                     step="0.01" 
@@ -959,32 +984,19 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
 
               <div className="form-row-2">
                 <div className="form-group">
-                  <label className="form-label">ยอดปันผล ($) (Dividend Amount)</label>
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      type="number" 
-                      step="0.01" 
-                      min="0"
-                      placeholder="0.00"
-                      className="form-input" 
-                      value={dividendAmount} 
-                      onChange={(e) => handleDividendChange(e.target.value)}
-                      style={{ paddingRight: '4.5rem' }}
-                    />
-                    {dividendAmount && parseFloat(dividendAmount) > 0 && (
-                      <button 
-                        type="button" 
-                        className="auto-calc-btn"
-                        onClick={() => setTaxAmount((parseFloat(dividendAmount) * 0.15).toFixed(2))}
-                        title="คำนวณหักภาษี ณ ที่จ่าย 15%"
-                      >
-                        หัก 15%
-                      </button>
-                    )}
-                  </div>
+                  <label className="form-label">ยอดปันผล ($)</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    min="0"
+                    placeholder="0.00"
+                    className="form-input" 
+                    value={dividendAmount} 
+                    onChange={(e) => setDividendAmount(e.target.value)}
+                  />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">ภาษีปันผล ($) (Tax Amount)</label>
+                  <label className="form-label">ภาษี ($)</label>
                   <input 
                     type="number" 
                     step="0.01" 
@@ -994,7 +1006,6 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
                     value={taxAmount} 
                     onChange={(e) => setTaxAmount(e.target.value)}
                   />
-                  <span className="input-helper">หักภาษี ณ ที่จ่ายปกติ 15% ของปันผล</span>
                 </div>
               </div>
             </div>
@@ -1009,7 +1020,7 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
                     <RefreshCw size={14} className="animate-spin" />
                     กำลังบันทึก...
                   </span>
-                ) : 'บันทึกข้อมูล'}
+                ) : 'บันทึก'}
               </button>
             </div>
           </form>
