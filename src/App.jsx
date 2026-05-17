@@ -92,7 +92,7 @@ function App() {
   };
 
   const [activeMainTab, setActiveMainTab] = useState('Hold');
-  const [activeSubTab, setActiveSubTab] = useState('Main');
+  const [activeSubTab, setActiveSubTab] = useState('Extra');
 
   const fetchData = async () => {
     setLoading(true);
@@ -121,6 +121,16 @@ function App() {
   const filteredData = useMemo(() => {
     return data.filter(item => item.port === activeSubTab);
   }, [data, activeSubTab]);
+
+  const subTabCounts = useMemo(() => {
+    const counts = {};
+    data.forEach(item => {
+      if (item.port) {
+        counts[item.port] = (counts[item.port] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [data]);
 
   const summary = useMemo(() => {
     const totalStocks = mainTabData.length;
@@ -195,8 +205,16 @@ function App() {
             key={mainTab}
             className={`main-tab-button ${activeMainTab === mainTab ? 'active' : ''}`}
             onClick={() => handleMainTabChange(mainTab)}
+            style={{ position: 'relative' }}
           >
-            {mainTab}
+            {activeMainTab === mainTab && (
+              <motion.div
+                layoutId="activeMainTabBg"
+                className="main-tab-active-bg"
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
+            )}
+            <span style={{ position: 'relative', zIndex: 2 }}>{mainTab}</span>
           </button>
         ))}
       </div>
@@ -242,16 +260,23 @@ function App() {
       </div>
 
       {/* Sub Tabs */}
-      <div className="tabs-container" style={{ marginBottom: '2rem' }}>
-        {PORT_CATEGORIES[activeMainTab].map(subTab => (
-          <button
-            key={subTab}
-            className={`tab-button ${activeSubTab === subTab ? 'active' : ''}`}
-            onClick={() => setActiveSubTab(subTab)}
-          >
-            {subTab}
-          </button>
-        ))}
+      <div className="tabs-container">
+        {PORT_CATEGORIES[activeMainTab].map(subTab => {
+          const count = subTabCounts[subTab] || 0;
+          return (
+            <button
+              key={subTab}
+              className={`tab-button ${activeSubTab === subTab ? 'active' : ''}`}
+              onClick={() => setActiveSubTab(subTab)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
+            >
+              <span>{subTab}</span>
+              <span className="tab-count-badge">
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Stock List */}
