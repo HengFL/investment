@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, PieChart, DollarSign, Activity, ExternalLink, RefreshCw } from 'lucide-react';
+import { TrendingUp, PieChart, DollarSign, Activity, ExternalLink, RefreshCw, Edit, X, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbwkjycorGKU-NDKVxETVhEC_BiKHhSuuUhMX4uZhDTIYi5KuoPjtIu5FzwE3Ahhc1HZ/exec';
+const UPDATE_API_URL = 'https://script.google.com/macros/s/AKfycbzNnoWQyuqBNn2y1kNq3ecRc8bTx_DeU5GmCCgF7y5ER3TOFZmiTWXnr_unNg6unYzS/exec';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '-';
@@ -83,6 +84,7 @@ function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedStock, setSelectedStock] = useState(null);
   const PORT_CATEGORIES = {
     'Hold': ['Extra', 'Main', 'Second', 'Addon', 'Begin', 'DR'],
     'Trade': ['Trade'],
@@ -262,7 +264,12 @@ function App() {
           <AnimatePresence mode="popLayout">
             {filteredData.length > 0 ? (
               filteredData.map((stock, index) => (
-                <StockCard key={stock["ชื่อหุ้น"] + index} stock={stock} index={index} />
+                <StockCard 
+                  key={stock["ชื่อหุ้น"] + index} 
+                  stock={stock} 
+                  index={index} 
+                  onUpdateClick={setSelectedStock} 
+                />
               ))
             ) : (
               <div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}>
@@ -272,6 +279,16 @@ function App() {
           </AnimatePresence>
         )}
       </div>
+
+      <AnimatePresence>
+        {selectedStock && (
+          <UpdateModal 
+            stock={selectedStock} 
+            onClose={() => setSelectedStock(null)} 
+            onUpdateSuccess={fetchData} 
+          />
+        )}
+      </AnimatePresence>
 
     </div>
   );
@@ -296,7 +313,7 @@ function SummaryCard({ label, value, icon, delay }) {
   );
 }
 
-function StockCard({ stock, index }) {
+function StockCard({ stock, index, onUpdateClick }) {
   const [logoError, setLogoError] = useState(false);
   const ticker = stock["ชื่อหุ้น"];
   const logoUrl = `https://assets.parqet.com/logos/symbol/${ticker}?format=png`;
@@ -382,7 +399,277 @@ function StockCard({ stock, index }) {
           relativeTime={getRelativeTime(stock["วันที่ขายล่าสุด"])} 
         />
       </div>
+
+      <div className="stock-card-footer">
+        <button 
+          className="update-card-btn"
+          onClick={() => onUpdateClick(stock)}
+        >
+          <Edit size={14} />
+          อัปเดต
+        </button>
+      </div>
     </motion.div>
+  );
+}
+
+function UpdateModal({ stock, onClose, onUpdateSuccess }) {
+  const [lastBuyDate, setLastBuyDate] = useState(() => {
+    if (stock["วันที่ซื้อล่าสุด"]) {
+      try {
+        const date = new Date(stock["วันที่ซื้อล่าสุด"]);
+        if (!isNaN(date.getTime())) {
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, '0');
+          const d = String(date.getDate()).padStart(2, '0');
+          return `${y}-${m}-${d}`;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+  const [buyAmount, setBuyAmount] = useState(() => {
+    return stock["ยอดซื้อ ($)"] !== undefined && stock["ยอดซื้อ ($)"] !== null ? stock["ยอดซื้อ ($)"] : '';
+  });
+  const [sellAmount, setSellAmount] = useState(() => {
+    return stock["ยอดขาย ($)"] !== undefined && stock["ยอดขาย ($)"] !== null ? stock["ยอดขาย ($)"] : '';
+  });
+  const [dividendAmount, setDividendAmount] = useState(() => {
+    return stock["ยอดปันผล ($)"] !== undefined && stock["ยอดปันผล ($)"] !== null ? stock["ยอดปันผล ($)"] : '';
+  });
+  const [taxAmount, setTaxAmount] = useState(() => {
+    return stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || '';
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState('idle'); // 'idle' | 'success' | 'error'
+  const [statusMessage, setStatusMessage] = useState('');
+
+  const handleDividendChange = (val) => {
+    setDividendAmount(val);
+    const parsed = parseFloat(val);
+    if (!isNaN(parsed) && parsed > 0) {
+      setTaxAmount((parsed * 0.15).toFixed(2));
+    } else {
+      setTaxAmount('');
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setStatus('idle');
+    
+    const requestData = {
+      sheet_name: stock.port || 'Extra',
+      symbol: stock["ชื่อหุ้น"],
+      last_buy_date: lastBuyDate,
+      buy_amount: parseFloat(buyAmount) || 0,
+      sell_amount: parseFloat(sellAmount) || 0,
+      dividend_amount: parseFloat(dividendAmount) || 0,
+      tax_amount: parseFloat(taxAmount) || 0
+    };
+
+    try {
+      const response = await fetch(UPDATE_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+        body: JSON.stringify(requestData)
+      });
+      
+      const json = await response.json();
+      
+      if (json.status === 'success') {
+        setStatus('success');
+        setStatusMessage(json.message || 'อัปเดตข้อมูลสำเร็จ');
+        setTimeout(() => {
+          onUpdateSuccess();
+          onClose();
+        }, 2000);
+      } else {
+        setStatus('error');
+        setStatusMessage(json.message || 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus('error');
+      setStatusMessage('เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <motion.div 
+        className="modal-content glass-card"
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ duration: 0.2 }}
+      >
+        {status === 'success' ? (
+          <div className="modal-status-screen success">
+            <CheckCircle2 size={56} className="status-icon success-icon animate-bounce" />
+            <h3>อัปเดตข้อมูลสำเร็จ!</h3>
+            <p className="text-muted">{statusMessage}</p>
+            <div className="loading-dots">
+              <span>กำลังโหลดข้อมูลใหม่</span>
+              <span className="dot">.</span>
+              <span className="dot">.</span>
+              <span className="dot">.</span>
+            </div>
+          </div>
+        ) : status === 'error' ? (
+          <div className="modal-status-screen error">
+            <AlertCircle size={56} className="status-icon error-icon" />
+            <h3>เกิดข้อผิดพลาด</h3>
+            <p className="status-error-text">{statusMessage}</p>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', width: '100%' }}>
+              <button type="button" className="form-btn secondary" onClick={() => setStatus('idle')} style={{ flex: 1 }}>
+                ลองอีกครั้ง
+              </button>
+              <button type="button" className="form-btn close" onClick={onClose} style={{ flex: 1 }}>
+                ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                <div className="modal-stock-icon">
+                  <img 
+                    src={`https://assets.parqet.com/logos/symbol/${stock["ชื่อหุ้น"]}?format=png`} 
+                    alt={stock["ชื่อหุ้น"]} 
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
+                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '2px' }}
+                  />
+                  <span style={{ display: 'none', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)', padding: '8px' }}>
+                    {stock["ชื่อหุ้น"].substring(0, 2)}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="modal-title">อัปเดตข้อมูล {stock["ชื่อหุ้น"]}</h3>
+                  <p className="modal-subtitle">{stock["ชื่อบริษัท"]} • พอร์ต: <span className="highlight-tag">{stock.port}</span></p>
+                </div>
+              </div>
+              <button type="button" className="modal-close-btn" onClick={onClose}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">
+                  <Calendar size={14} style={{ marginRight: '4px' }} />
+                  วันที่ดำเนินการ (Date)
+                </label>
+                <input 
+                  type="date" 
+                  className="form-input" 
+                  value={lastBuyDate} 
+                  onChange={(e) => setLastBuyDate(e.target.value)}
+                  required 
+                />
+              </div>
+
+              <div className="form-row-2">
+                <div className="form-group">
+                  <label className="form-label">ยอดซื้อ ($) (Buy Amount)</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    min="0"
+                    placeholder="0.00"
+                    className="form-input" 
+                    value={buyAmount} 
+                    onChange={(e) => setBuyAmount(e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">ยอดขาย ($) (Sell Amount)</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    min="0"
+                    placeholder="0.00"
+                    className="form-input" 
+                    value={sellAmount} 
+                    onChange={(e) => setSellAmount(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row-2">
+                <div className="form-group">
+                  <label className="form-label">ยอดปันผล ($) (Dividend Amount)</label>
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      min="0"
+                      placeholder="0.00"
+                      className="form-input" 
+                      value={dividendAmount} 
+                      onChange={(e) => handleDividendChange(e.target.value)}
+                      style={{ paddingRight: '4.5rem' }}
+                    />
+                    {dividendAmount && parseFloat(dividendAmount) > 0 && (
+                      <button 
+                        type="button" 
+                        className="auto-calc-btn"
+                        onClick={() => setTaxAmount((parseFloat(dividendAmount) * 0.15).toFixed(2))}
+                        title="คำนวณหักภาษี ณ ที่จ่าย 15%"
+                      >
+                        หัก 15%
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">ภาษีปันผล ($) (Tax Amount)</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    min="0"
+                    placeholder="0.00"
+                    className="form-input" 
+                    value={taxAmount} 
+                    onChange={(e) => setTaxAmount(e.target.value)}
+                  />
+                  <span className="input-helper">หักภาษี ณ ที่จ่ายปกติ 15% ของปันผล</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="form-btn cancel" onClick={onClose} disabled={isSubmitting}>
+                ยกเลิก
+              </button>
+              <button type="submit" className="form-btn submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <span className="spinner-container">
+                    <RefreshCw size={14} className="animate-spin" />
+                    กำลังบันทึก...
+                  </span>
+                ) : 'บันทึกข้อมูล'}
+              </button>
+            </div>
+          </form>
+        )}
+      </motion.div>
+    </div>
   );
 }
 
