@@ -131,11 +131,24 @@ const formatCurrency = (val) => {
   return isNegative ? `-$${formatted}` : `$${formatted}`;
 };
 
+const formatTHB = (val) => {
+  const isNegative = val < 0;
+  const absVal = Math.abs(val);
+  let formatted = '';
+  if (absVal >= 1e12) formatted = `${(absVal / 1e12).toFixed(2)}T`;
+  else if (absVal >= 1e9) formatted = `${(absVal / 1e9).toFixed(2)}B`;
+  else if (absVal >= 1e6) formatted = `${(absVal / 1e6).toFixed(2)}M`;
+  else formatted = absVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  
+  return isNegative ? `-฿${formatted}` : `฿${formatted}`;
+};
+
 function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedStock, setSelectedStock] = useState(null);
+  const [exchangeRate, setExchangeRate] = useState(36.5);
   const PORT_CATEGORIES = {
     'Hold': ['Extra', 'Main', 'Second', 'Addon', 'Begin', 'DR'],
     'Trade': ['Trade'],
@@ -148,9 +161,23 @@ function App() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(API_URL);
-      const json = await response.json();
+      const [stockRes, rateRes] = await Promise.all([
+        fetch(API_URL),
+        fetch('https://open.er-api.com/v6/latest/USD').catch(err => {
+          console.error('Exchange rate fetch error:', err);
+          return null;
+        })
+      ]);
+      
+      const json = await stockRes.json();
       setData(json);
+      
+      if (rateRes && rateRes.ok) {
+        const rateJson = await rateRes.json();
+        if (rateJson && rateJson.rates && rateJson.rates.THB) {
+          setExchangeRate(rateJson.rates.THB);
+        }
+      }
       setError(null);
     } catch (err) {
       console.error('Fetch error:', err);
@@ -266,7 +293,12 @@ function App() {
           >
             Srock US
           </motion.h1>
-          <p className="text-muted">หุ้นสหรัฐ</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+            <p className="text-muted">หุ้นสหรัฐ</p>
+            <span className="exchange-rate-badge" title="อัปเดตเรียลไทม์จาก open.er-api.com">
+              1 USD ≈ ฿{exchangeRate.toFixed(2)}
+            </span>
+          </div>
         </div>
         <button 
           className="refresh-button" 
@@ -318,6 +350,7 @@ function App() {
         <SummaryCard 
           label="ราคาตั้งซื้อทั้งหมด" 
           value={formatCurrency(summary.totalTargetPrice)} 
+          subValue={formatTHB(summary.totalTargetPrice * exchangeRate)}
           icon={<DollarSign size={20} color="var(--primary)" />}
           delay={0.3}
           numValue={summary.totalTargetPrice}
@@ -326,6 +359,7 @@ function App() {
         <SummaryCard 
           label="ยอดตั้งซื้อทั้งหมด" 
           value={formatCurrency(summary.totalRemainingTarget)} 
+          subValue={formatTHB(summary.totalRemainingTarget * exchangeRate)}
           icon={<Activity size={20} color="var(--warning)" />}
           delay={0.4}
           numValue={summary.totalRemainingTarget}
@@ -333,18 +367,21 @@ function App() {
         <SummaryCard 
           label="ยอดซื้อทั้งหมด" 
           value={formatCurrency(summary.totalBuyAmount)} 
+          subValue={formatTHB(summary.totalBuyAmount * exchangeRate)}
           icon={<DollarSign size={20} color="var(--success)" />}
           delay={0.5}
         />
         <SummaryCard 
           label="ยอดขายทั้งหมด" 
           value={formatCurrency(summary.totalSellAmount)} 
+          subValue={formatTHB(summary.totalSellAmount * exchangeRate)}
           icon={<DollarSign size={20} color="var(--error)" />}
           delay={0.6}
         />
         <SummaryCard 
           label="ยอดกำไรทั้งหมด" 
           value={formatCurrency(summary.totalProfitSum)} 
+          subValue={formatTHB(summary.totalProfitSum * exchangeRate)}
           icon={<TrendingUp size={20} color={summary.totalProfitSum >= 0 ? "var(--success)" : "var(--error)"} />}
           delay={0.7}
           numValue={summary.totalProfitSum}
@@ -352,6 +389,7 @@ function App() {
         <SummaryCard 
           label="ยอดปันผลทั้งหมด" 
           value={formatCurrency(summary.totalDividendSum)} 
+          subValue={formatTHB(summary.totalDividendSum * exchangeRate)}
           icon={<DollarSign size={20} color="var(--success)" />}
           delay={0.8}
           numValue={summary.totalDividendSum}
@@ -360,6 +398,7 @@ function App() {
         <SummaryCard 
           label="ยอดภาษีทั้งหมด" 
           value={formatCurrency(summary.totalTaxSum)} 
+          subValue={formatTHB(summary.totalTaxSum * exchangeRate)}
           icon={<DollarSign size={20} color="var(--error)" />}
           delay={0.9}
           numValue={summary.totalTaxSum}
@@ -368,6 +407,7 @@ function App() {
         <SummaryCard 
           label="รายได้ทั้งหมด" 
           value={formatCurrency(summary.totalIncomeSum)} 
+          subValue={formatTHB(summary.totalIncomeSum * exchangeRate)}
           icon={<TrendingUp size={20} color={summary.totalIncomeSum >= 0 ? "var(--success)" : "var(--error)"} />}
           delay={1.0}
           numValue={summary.totalIncomeSum}
@@ -409,6 +449,7 @@ function App() {
                   stock={stock} 
                   index={index} 
                   onUpdateClick={setSelectedStock} 
+                  exchangeRate={exchangeRate}
                 />
               ))
             ) : (
@@ -434,7 +475,7 @@ function App() {
   );
 }
 
-function SummaryCard({ label, value, icon, delay, numValue, colorMode = 'financial' }) {
+function SummaryCard({ label, value, subValue, icon, delay, numValue, colorMode = 'financial' }) {
   const getValueColor = () => {
     if (numValue === undefined || numValue === null) return '';
     if (colorMode === 'binary') {
@@ -459,6 +500,9 @@ function SummaryCard({ label, value, icon, delay, numValue, colorMode = 'financi
         </div>
       </div>
       <div className={`summary-value ${getValueColor()}`}>{value}</div>
+      {subValue && (
+        <div className={`summary-sub-value ${getValueColor()}`}>{subValue}</div>
+      )}
     </motion.div>
   );
 }
@@ -560,20 +604,28 @@ function InteractiveTime({ label, dateStr, colorClass, customDisplay, customStyl
   );
 }
 
-function StockCard({ stock, index, onUpdateClick }) {
+function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
   const [logoError, setLogoError] = useState(false);
   const ticker = stock["ชื่อหุ้น"];
   const logoUrl = `https://assets.parqet.com/logos/symbol/${ticker}?format=png`;
 
-  const DetailItem = ({ label, value, isMoney = false, relativeTime = '', colorClass = '' }) => (
-    <div className={`detail-item ${colorClass}`}>
-      <span className="detail-label">{label}</span>
-      <span className={`detail-value ${colorClass.startsWith('color-') ? colorClass : ''}`}>
-        {isMoney ? `$${(parseFloat(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : value || '-'}
-        {relativeTime && <span className="relative-time"> {relativeTime}</span>}
-      </span>
-    </div>
-  );
+  const DetailItem = ({ label, value, isMoney = false, relativeTime = '', colorClass = '' }) => {
+    const parsedValue = parseFloat(value) || 0;
+    return (
+      <div className={`detail-item ${colorClass}`}>
+        <span className="detail-label">{label}</span>
+        <span className={`detail-value ${colorClass.startsWith('color-') ? colorClass : ''}`}>
+          {isMoney ? `$${parsedValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : value || '-'}
+          {relativeTime && <span className="relative-time"> {relativeTime}</span>}
+        </span>
+        {isMoney && (
+          <span className={`detail-sub-value ${colorClass.startsWith('color-') ? colorClass : ''}`}>
+            ฿{(parsedValue * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   const targetPrice = parseFloat(stock["ราคาตั้งซื้อ ($)"]) || 0;
   const targetAmount = targetPrice > 0 ? calculateTargetAmount(stock["วันที่กำหนด"], stock["ราคาตั้งซื้อ ($)"]) : 0;
@@ -652,11 +704,14 @@ function StockCard({ stock, index, onUpdateClick }) {
         </div>
 
         <div className="stock-stats">
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
             <span className="detail-label">ราคาหุ้น</span>
             <span className="price-value">${(parseFloat(stock["ราคาหุ้น ($)"]) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+              (≈ ฿{((parseFloat(stock["ราคาหุ้น ($)"]) || 0) * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+            </span>
           </div>
-          <div className="dividend-tag" style={{ marginTop: '0.15rem', display: 'inline-block' }}>ปันผล {stock["อัตราปันผล (%)"]}%</div>
+          <div className="dividend-tag" style={{ marginTop: '0.25rem', display: 'inline-block' }}>ปันผล {stock["อัตราปันผล (%)"]}%</div>
         </div>
       </div>
 
@@ -664,7 +719,7 @@ function StockCard({ stock, index, onUpdateClick }) {
         <DetailItem label="ราคาตั้งซื้อ" value={stock["ราคาตั้งซื้อ ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ราคาตั้งซื้อ ($)"])} />
         <DetailItem label="ยอดตั้งซื้อ" value={remainingTarget} isMoney={true} colorClass={getStatusColor(remainingTarget)} />
         <DetailItem label="ยอดซื้อ" value={stock["ยอดซื้อ ($)"]} isMoney={true} />
-        <DetailItem label="ยอดขาย" value={stock["ยอดขาย ($)"]} isMoney={true} />
+        <DetailItem label="ยอดขาย" value={stock["ยอดขาย ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดขาย ($)"])} />
         <DetailItem label="ยอดกำไร" value={totalProfit} isMoney={true} colorClass={getStatusColor(totalProfit)} />
         <DetailItem label="ยอดปันผล" value={stock["ยอดปันผล ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดปันผล ($)"])} />
         <DetailItem label="ยอดภาษี" value={taxVal} isMoney={true} colorClass={getBinaryColorClass(taxVal)} />
