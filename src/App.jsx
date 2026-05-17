@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { TrendingUp, PieChart, DollarSign, Activity, ExternalLink, RefreshCw, Edit, X, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
+import { TrendingUp, PieChart, DollarSign, Activity, ExternalLink, RefreshCw, Edit, X, CheckCircle2, AlertCircle, Calendar, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbwkjycorGKU-NDKVxETVhEC_BiKHhSuuUhMX4uZhDTIYi5KuoPjtIu5FzwE3Ahhc1HZ/exec';
@@ -156,7 +156,8 @@ function App() {
   };
 
   const [activeMainTab, setActiveMainTab] = useState('Hold');
-  const [activeSubTab, setActiveSubTab] = useState('Extra');
+  const [activeSubTab, setActiveSubTab] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
@@ -197,8 +198,30 @@ function App() {
   }, [data, activeMainTab]);
 
   const filteredData = useMemo(() => {
-    return data.filter(item => item.port === activeSubTab);
-  }, [data, activeSubTab]);
+    return data.filter(item => {
+      const subPorts = PORT_CATEGORIES[activeMainTab];
+      const matchesPort = activeSubTab === 'All'
+        ? subPorts.includes(item.port)
+        : item.port === activeSubTab;
+        
+      if (!matchesPort) return false;
+      
+      if (!searchQuery.trim()) return true;
+      
+      const query = searchQuery.toLowerCase().trim();
+      const ticker = (item["ชื่อหุ้น"] || '').toLowerCase();
+      const company = (item["ชื่อบริษัท"] || '').toLowerCase();
+      const type = (item["ประเภท"] || '').toLowerCase();
+      const market = (item["ตลาด"] || '').toLowerCase();
+      const status = (item["สถานะ"] || '').toLowerCase();
+      
+      return ticker.includes(query) || 
+             company.includes(query) || 
+             type.includes(query) || 
+             market.includes(query) || 
+             status.includes(query);
+    });
+  }, [data, activeSubTab, searchQuery, activeMainTab]);
 
   const subTabCounts = useMemo(() => {
     const counts = {};
@@ -269,7 +292,8 @@ function App() {
 
   const handleMainTabChange = (mainTab) => {
     setActiveMainTab(mainTab);
-    setActiveSubTab(PORT_CATEGORIES[mainTab][0]);
+    setActiveSubTab('All');
+    setSearchQuery('');
   };
 
   if (error) {
@@ -414,24 +438,59 @@ function App() {
         />
       </div>
 
-      {/* Sub Tabs */}
-      <div className="tabs-container">
-        {PORT_CATEGORIES[activeMainTab].map(subTab => {
-          const count = subTabCounts[subTab] || 0;
-          return (
-            <button
-              key={subTab}
-              className={`tab-button ${activeSubTab === subTab ? 'active' : ''}`}
-              onClick={() => setActiveSubTab(subTab)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
+      {/* List Controls: Sub Tabs & Search */}
+      <div className="list-controls-container">
+        <div className="tabs-container">
+          {/* Tab All at the very front */}
+          <button
+            key="All"
+            className={`tab-button ${activeSubTab === 'All' ? 'active' : ''}`}
+            onClick={() => setActiveSubTab('All')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
+          >
+            <span>All</span>
+            <span className="tab-count-badge">
+              {mainTabData.length}
+            </span>
+          </button>
+
+          {PORT_CATEGORIES[activeMainTab].map(subTab => {
+            const count = subTabCounts[subTab] || 0;
+            return (
+              <button
+                key={subTab}
+                className={`tab-button ${activeSubTab === subTab ? 'active' : ''}`}
+                onClick={() => setActiveSubTab(subTab)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
+              >
+                <span>{subTab}</span>
+                <span className="tab-count-badge">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        
+        <div className="search-container">
+          <Search size={16} className="search-icon" />
+          <input
+            type="text"
+            placeholder="ค้นหาชื่อหุ้น, บริษัท, ตลาด..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+          />
+          {searchQuery && (
+            <button 
+              className="clear-search-btn" 
+              onClick={() => setSearchQuery('')}
+              title="ล้างคำค้นหา"
             >
-              <span>{subTab}</span>
-              <span className="tab-count-badge">
-                {count}
-              </span>
+              <X size={16} />
             </button>
-          );
-        })}
+          )}
+        </div>
       </div>
 
       {/* Stock List */}
@@ -453,8 +512,28 @@ function App() {
                 />
               ))
             ) : (
-              <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
-                <p className="text-muted">ไม่พบข้อมูลในพอร์ต "{activeSubTab}"</p>
+              <div className="glass-card animate-fade-in" style={{ padding: '2.5rem 2rem', textAlign: 'center' }}>
+                {searchQuery ? (
+                  <>
+                    <p className="text-muted" style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.75rem' }}>
+                      ไม่พบผลลัพธ์ที่ตรงกับ "{searchQuery}"
+                    </p>
+                    <button 
+                      className="tab-button" 
+                      onClick={() => setSearchQuery('')}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.45rem 1rem' }}
+                    >
+                      <X size={14} />
+                      ล้างคำค้นหา
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-muted">
+                    {activeSubTab === 'All' 
+                      ? `ไม่พบข้อมูลในพอร์ตกลุ่ม "${activeMainTab}"` 
+                      : `ไม่พบข้อมูลในพอร์ต "${activeSubTab}"`}
+                  </p>
+                )}
               </div>
             )}
           </AnimatePresence>
@@ -681,13 +760,8 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
         
         <div className="stock-info">
           <h3>
-            {stock["ชื่อบริษัท"]}{' '}
-            <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>({ticker})</span>
-            {stock["มูลค่าตลาด ($)"] && (
-              <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.8rem', marginLeft: '0.5rem' }}>
-                • มูลค่าตลาด {formatCurrency(parseFloat(stock["มูลค่าตลาด ($)"]) || 0)}
-              </span>
-            )}
+            <span style={{ fontWeight: 700, marginRight: '0.375rem' }}>{ticker}</span>
+            <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85rem' }}>{stock["ชื่อบริษัท"]}</span>
           </h3>
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <span className="market-tag">{stock["ตลาด"]}</span>
@@ -705,15 +779,35 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
           </div>
         </div>
 
-        <div className="stock-stats">
+        <div className="stock-stats" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.375rem' }}>
+          {(() => {
+            const dividendVal = parseFloat(stock["อัตราปันผล (%)"]) || 0;
+            return (
+              <div 
+                className={`dividend-tag ${dividendVal === 0 ? 'dividend-tag-zero' : ''}`} 
+                style={{ display: 'inline-block' }}
+              >
+                ปันผล {dividendVal.toFixed(2)}%
+              </div>
+            );
+          })()}
+          
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            {stock["มูลค่าตลาด ($)"] && (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem' }}>
+                <span className="detail-label">มูลค่าตลาด</span>
+                <span style={{ color: 'var(--text-main)', fontWeight: 700, fontSize: '0.95rem' }}>
+                  {formatCurrency(parseFloat(stock["มูลค่าตลาด ($)"]) || 0)}
+                </span>
+              </div>
+            )}
+            {stock["มูลค่าตลาด ($)"] && <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>•</span>}
             <span className="detail-label">ราคาหุ้น</span>
             <span className="price-value">${(parseFloat(stock["ราคาหุ้น ($)"]) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
               (≈ ฿{((parseFloat(stock["ราคาหุ้น ($)"]) || 0) * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
             </span>
           </div>
-          <div className="dividend-tag" style={{ marginTop: '0.25rem', display: 'inline-block' }}>ปันผล {stock["อัตราปันผล (%)"]}%</div>
         </div>
       </div>
 
