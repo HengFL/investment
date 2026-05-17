@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TrendingUp, PieChart, DollarSign, Activity, ExternalLink, RefreshCw, Edit, X, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -53,6 +53,52 @@ const getTimeColor = (dateStr) => {
     if (diffInMonths <= 2) return 'time-warning-1';
     if (diffInMonths <= 3) return 'time-warning-2';
     return 'time-danger';
+  } catch (e) {
+    return '';
+  }
+};
+
+const getHoldingAge = (firstBuyDateStr, lastSellDateStr, status) => {
+  if (!firstBuyDateStr) return '';
+  try {
+    const startDate = new Date(firstBuyDateStr);
+    if (isNaN(startDate.getTime())) return '';
+    
+    let endDate = new Date();
+    if (status === 'ขายแล้ว' && lastSellDateStr) {
+      const sellDate = new Date(lastSellDateStr);
+      if (!isNaN(sellDate.getTime())) {
+        endDate = sellDate;
+      }
+    }
+    
+    let years = endDate.getFullYear() - startDate.getFullYear();
+    let months = endDate.getMonth() - startDate.getMonth();
+    let days = endDate.getDate() - startDate.getDate();
+    
+    if (days < 0) {
+      months -= 1;
+      const prevMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 0);
+      days += prevMonth.getDate();
+    }
+    
+    if (months < 0) {
+      years -= 1;
+      months += 12;
+    }
+    
+    const parts = [];
+    if (years > 0) {
+      parts.push(`${years} ปี`);
+    }
+    if (months > 0) {
+      parts.push(`${months} เดือน`);
+    }
+    if (days > 0 || parts.length === 0) {
+      parts.push(`${days} วัน`);
+    }
+    
+    return parts.join(' ');
   } catch (e) {
     return '';
   }
@@ -201,9 +247,9 @@ function App() {
 
   if (error) {
     return (
-      <div className="container" style={{ textAlign: 'center', paddingTop: '10rem' }}>
+      <div className="container" style={{ textAlign: 'center', paddingTop: '5rem' }}>
         <h2 style={{ color: 'var(--error)' }}>{error}</h2>
-        <button className="tab-button active" onClick={fetchData} style={{ marginTop: '1rem' }}>
+        <button className="tab-button active" onClick={fetchData} style={{ marginTop: '0.75rem' }}>
           ลองใหม่อีกครั้ง
         </button>
       </div>
@@ -212,7 +258,7 @@ function App() {
 
   return (
     <div className="container">
-      <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <header style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           <motion.h1 
             initial={{ opacity: 0, x: -10 }}
@@ -266,18 +312,23 @@ function App() {
           value={`${summary.avgDividend.toFixed(2)}%`} 
           icon={<TrendingUp size={20} color="var(--success)" />}
           delay={0.2}
+          numValue={summary.avgDividend}
+          colorMode="binary"
         />
         <SummaryCard 
           label="ราคาตั้งซื้อทั้งหมด" 
           value={formatCurrency(summary.totalTargetPrice)} 
           icon={<DollarSign size={20} color="var(--primary)" />}
           delay={0.3}
+          numValue={summary.totalTargetPrice}
+          colorMode="binary"
         />
         <SummaryCard 
           label="ยอดตั้งซื้อทั้งหมด" 
           value={formatCurrency(summary.totalRemainingTarget)} 
           icon={<Activity size={20} color="var(--warning)" />}
           delay={0.4}
+          numValue={summary.totalRemainingTarget}
         />
         <SummaryCard 
           label="ยอดซื้อรวมทั้งหมด" 
@@ -296,24 +347,30 @@ function App() {
           value={formatCurrency(summary.totalProfitSum)} 
           icon={<TrendingUp size={20} color={summary.totalProfitSum >= 0 ? "var(--success)" : "var(--error)"} />}
           delay={0.7}
+          numValue={summary.totalProfitSum}
         />
         <SummaryCard 
           label="ยอดปันผลทั้งหมด" 
           value={formatCurrency(summary.totalDividendSum)} 
           icon={<DollarSign size={20} color="var(--success)" />}
           delay={0.8}
+          numValue={summary.totalDividendSum}
+          colorMode="binary"
         />
         <SummaryCard 
           label="ยอดภาษีทั้งหมด" 
           value={formatCurrency(summary.totalTaxSum)} 
           icon={<DollarSign size={20} color="var(--error)" />}
           delay={0.9}
+          numValue={summary.totalTaxSum}
+          colorMode="binary"
         />
         <SummaryCard 
           label="รายได้ทั้งหมด" 
           value={formatCurrency(summary.totalIncomeSum)} 
           icon={<TrendingUp size={20} color={summary.totalIncomeSum >= 0 ? "var(--success)" : "var(--error)"} />}
           delay={1.0}
+          numValue={summary.totalIncomeSum}
         />
       </div>
 
@@ -340,7 +397,7 @@ function App() {
       {/* Stock List */}
       <div className="stock-list">
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '5rem' }}>
+          <div style={{ textAlign: 'center', padding: '3rem' }}>
             <p className="text-muted">กำลังโหลดข้อมูลพอร์ตของคุณ...</p>
           </div>
         ) : (
@@ -355,7 +412,7 @@ function App() {
                 />
               ))
             ) : (
-              <div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}>
+              <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
                 <p className="text-muted">ไม่พบข้อมูลในพอร์ต "{activeSubTab}"</p>
               </div>
             )}
@@ -377,7 +434,17 @@ function App() {
   );
 }
 
-function SummaryCard({ label, value, icon, delay }) {
+function SummaryCard({ label, value, icon, delay, numValue, colorMode = 'financial' }) {
+  const getValueColor = () => {
+    if (numValue === undefined || numValue === null) return '';
+    if (colorMode === 'binary') {
+      return numValue === 0 ? 'color-grey' : 'color-black';
+    }
+    if (numValue === 0) return 'color-grey';
+    if (numValue > 0) return 'color-green';
+    return 'color-red';
+  };
+
   return (
     <motion.div 
       className="glass-card summary-card"
@@ -387,12 +454,109 @@ function SummaryCard({ label, value, icon, delay }) {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
         <span className="summary-label">{label}</span>
-        <div style={{ background: '#f1f5f9', padding: '6px', borderRadius: '8px' }}>
+        <div style={{ background: '#f1f5f9', padding: '4px', borderRadius: '6px' }}>
           {icon}
         </div>
       </div>
-      <div className="summary-value">{value}</div>
+      <div className={`summary-value ${getValueColor()}`}>{value}</div>
     </motion.div>
+  );
+}
+
+function InteractiveTime({ label, dateStr, colorClass, customDisplay, customStyle }) {
+  const [showPopover, setShowPopover] = useState(false);
+  const popoverRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target)) {
+        setShowPopover(false);
+      }
+    };
+    if (showPopover) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPopover]);
+
+  if (!dateStr) return null;
+
+  const formattedDate = formatDate(dateStr);
+  const relativeTime = getRelativeTime(dateStr);
+  
+  const displayVal = customDisplay || relativeTime || formattedDate;
+
+  return (
+    <div className={colorClass} style={{ display: 'flex', gap: '0.375rem', alignItems: 'baseline', position: 'relative' }}>
+      {label && <span className="detail-label" style={{ fontSize: '0.7rem' }}>{label}</span>}
+      <div style={{ position: 'relative', display: 'inline-block' }} ref={popoverRef}>
+        <span 
+          className="relative-time" 
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowPopover(!showPopover);
+          }}
+          style={{ 
+            fontSize: '0.8rem', 
+            fontWeight: 600, 
+            cursor: 'pointer',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            transition: 'background 0.2s',
+            userSelect: 'none',
+            display: 'inline-block',
+            ...customStyle
+          }}
+          title="คลิกเพื่อดูวันที่"
+        >
+          {displayVal}
+        </span>
+        
+        <AnimatePresence>
+          {showPopover && (
+            <motion.div
+              initial={{ opacity: 0, y: 5, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 5, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              style={{
+                position: 'absolute',
+                bottom: '100%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                marginBottom: '8px',
+                background: '#1e293b',
+                color: '#ffffff',
+                padding: '6px 10px',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                zIndex: 10,
+              }}
+            >
+              {formattedDate}
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '0',
+                  height: '0',
+                  borderLeft: '5px solid transparent',
+                  borderRight: '5px solid transparent',
+                  borderTop: '5px solid #1e293b'
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }
 
@@ -404,7 +568,7 @@ function StockCard({ stock, index, onUpdateClick }) {
   const DetailItem = ({ label, value, isMoney = false, relativeTime = '', colorClass = '' }) => (
     <div className={`detail-item ${colorClass}`}>
       <span className="detail-label">{label}</span>
-      <span className="detail-value">
+      <span className={`detail-value ${colorClass.startsWith('color-') ? colorClass : ''}`}>
         {isMoney ? `$${(parseFloat(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : value || '-'}
         {relativeTime && <span className="relative-time"> {relativeTime}</span>}
       </span>
@@ -424,6 +588,11 @@ function StockCard({ stock, index, onUpdateClick }) {
     if (val === 0) return 'status-grey';
     if (val < 0) return 'status-red';
     return 'status-green';
+  };
+
+  const getBinaryColorClass = (val) => {
+    const num = parseFloat(val) || 0;
+    return num === 0 ? 'color-grey' : 'color-black';
   };
 
   return (
@@ -483,46 +652,44 @@ function StockCard({ stock, index, onUpdateClick }) {
         </div>
 
         <div className="stock-stats">
-          <span className="detail-label" style={{ display: 'block', marginBottom: '0.15rem' }}>ราคาหุ้น</span>
-          <div className="price-value">${(parseFloat(stock["ราคาหุ้น ($)"]) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          <div className="dividend-tag" style={{ marginTop: '0.25rem', display: 'inline-block' }}>ปันผล {stock["อัตราปันผล (%)"]}%</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', justifyContent: 'flex-end' }}>
+            <span className="detail-label">ราคาหุ้น</span>
+            <span className="price-value">${(parseFloat(stock["ราคาหุ้น ($)"]) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <div className="dividend-tag" style={{ marginTop: '0.15rem', display: 'inline-block' }}>ปันผล {stock["อัตราปันผล (%)"]}%</div>
         </div>
       </div>
 
       <div className="stock-details-grid">
-        <DetailItem label="ราคาตั้งซื้อ" value={stock["ราคาตั้งซื้อ ($)"]} isMoney={true} />
+        <DetailItem label="ราคาตั้งซื้อ" value={stock["ราคาตั้งซื้อ ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ราคาตั้งซื้อ ($)"])} />
         <DetailItem label="ยอดตั้งซื้อ" value={remainingTarget} isMoney={true} colorClass={getStatusColor(remainingTarget)} />
         <DetailItem label="ยอดซื้อ" value={stock["ยอดซื้อ ($)"]} isMoney={true} />
         <DetailItem label="ยอดขาย" value={stock["ยอดขาย ($)"]} isMoney={true} />
         <DetailItem label="ยอดกำไร" value={totalProfit} isMoney={true} colorClass={getStatusColor(totalProfit)} />
-        <DetailItem label="ยอดปันผล" value={stock["ยอดปันผล ($)"]} isMoney={true} />
-        <DetailItem label="ยอดภาษี" value={taxVal} isMoney={true} />
+        <DetailItem label="ยอดปันผล" value={stock["ยอดปันผล ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดปันผล ($)"])} />
+        <DetailItem label="ยอดภาษี" value={taxVal} isMoney={true} colorClass={getBinaryColorClass(taxVal)} />
         <DetailItem label="รายได้" value={netIncome} isMoney={true} colorClass={getStatusColor(netIncome)} />
       </div>
 
-      <div className="stock-card-footer" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div className={getTimeColor(stock["วันที่ซื้อล่าสุด"])} style={{ display: 'flex', gap: '0.375rem', alignItems: 'baseline' }}>
-            <span className="detail-label" style={{ fontSize: '0.7rem' }}>ซื้อล่าสุด:</span>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
-              {formatDate(stock["วันที่ซื้อล่าสุด"]) || '-'}
-              {stock["วันที่ซื้อล่าสุด"] && (
-                <span className="relative-time" style={{ fontSize: '0.7rem', marginLeft: '0.25rem' }}>
-                  {getRelativeTime(stock["วันที่ซื้อล่าสุด"])}
-                </span>
-              )}
-            </span>
-          </div>
+      <div className="stock-card-footer" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          {stock["วันที่ซื้อครั้งแรก"] && (
+            <InteractiveTime 
+              dateStr={stock["วันที่ซื้อครั้งแรก"]}
+              customDisplay={`${stock["สถานะ"] === 'ขายแล้ว' ? 'ถือรวม' : 'ถือมา'} ${getHoldingAge(stock["วันที่ซื้อครั้งแรก"], stock["วันที่ขายล่าสุด"], stock["สถานะ"])}`}
+              customStyle={{ background: '#e0f2fe', color: '#0369a1' }}
+            />
+          )}
+          <InteractiveTime 
+            label="ซื้อล่าสุด" 
+            dateStr={stock["วันที่ซื้อล่าสุด"]} 
+            colorClass={getTimeColor(stock["วันที่ซื้อล่าสุด"])} 
+          />
           {stock["วันที่ขายล่าสุด"] && (
-            <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'baseline' }}>
-              <span className="detail-label" style={{ fontSize: '0.7rem' }}>ขายล่าสุด:</span>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                {formatDate(stock["วันที่ขายล่าสุด"])}
-                <span className="relative-time" style={{ fontSize: '0.7rem', marginLeft: '0.25rem' }}>
-                  {getRelativeTime(stock["วันที่ขายล่าสุด"])}
-                </span>
-              </span>
-            </div>
+            <InteractiveTime 
+              label="ขายล่าสุด" 
+              dateStr={stock["วันที่ขายล่าสุด"]} 
+            />
           )}
         </div>
         <button 
@@ -656,7 +823,7 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
             <AlertCircle size={56} className="status-icon error-icon" />
             <h3>เกิดข้อผิดพลาด</h3>
             <p className="status-error-text">{statusMessage}</p>
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', width: '100%' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', width: '100%' }}>
               <button type="button" className="form-btn secondary" onClick={() => setStatus('idle')} style={{ flex: 1 }}>
                 ลองอีกครั้ง
               </button>
@@ -668,7 +835,7 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                 <div className="modal-stock-icon">
                   <img 
                     src={`https://assets.parqet.com/logos/symbol/${stock["ชื่อหุ้น"]}?format=png`} 
