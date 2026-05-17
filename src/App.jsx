@@ -74,10 +74,15 @@ const calculateTargetAmount = (startDateStr, pricePerMonth) => {
 };
 
 const formatCurrency = (val) => {
-  if (val >= 1e12) return `$${(val / 1e12).toFixed(2)}T`;
-  if (val >= 1e9) return `$${(val / 1e9).toFixed(2)}B`;
-  if (val >= 1e6) return `$${(val / 1e6).toFixed(2)}M`;
-  return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const isNegative = val < 0;
+  const absVal = Math.abs(val);
+  let formatted = '';
+  if (absVal >= 1e12) formatted = `${(absVal / 1e12).toFixed(2)}T`;
+  else if (absVal >= 1e9) formatted = `${(absVal / 1e9).toFixed(2)}B`;
+  else if (absVal >= 1e6) formatted = `${(absVal / 1e6).toFixed(2)}M`;
+  else formatted = absVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  
+  return isNegative ? `-$${formatted}` : `$${formatted}`;
 };
 
 function App() {
@@ -145,10 +150,35 @@ function App() {
     
     // Total Remaining Target (Need to calculate per item then sum)
     const totalRemainingTarget = mainTabData.reduce((acc, item) => {
-      const targetAmount = calculateTargetAmount(item["วันที่กำหนด"], item["ราคาตั้งซื้อ ($)"]);
-      const remainingTarget = targetAmount - (parseFloat(item["ยอดซื้อ ($)"]) || 0);
-      return acc + remainingTarget;
+      const targetPrice = parseFloat(item["ราคาตั้งซื้อ ($)"]) || 0;
+      if (targetPrice > 0) {
+        const targetAmount = calculateTargetAmount(item["วันที่กำหนด"], item["ราคาตั้งซื้อ ($)"]);
+        const remainingTarget = targetAmount - (parseFloat(item["ยอดซื้อ ($)"]) || 0);
+        return acc + remainingTarget;
+      }
+      return acc;
     }, 0);
+
+    // Sum of Total Profit/Loss (only calculated for status 'ขายแล้ว')
+    const totalProfitSum = mainTabData.reduce((acc, item) => {
+      if (item["สถานะ"] === "ขายแล้ว") {
+        const profit = (parseFloat(item["ยอดขาย ($)"]) || 0) - (parseFloat(item["ยอดซื้อ ($)"]) || 0);
+        return acc + profit;
+      }
+      return acc;
+    }, 0);
+
+    // Sum of Total Dividend
+    const totalDividendSum = mainTabData.reduce((acc, item) => acc + (parseFloat(item["ยอดปันผล ($)"]) || 0), 0);
+
+    // Sum of Total Tax
+    const totalTaxSum = mainTabData.reduce((acc, item) => {
+      const taxVal = item["ภาษีปันผล ($)"] || item["ภาษี ($)"] || item["ยอดภาษี ($)"] || 0;
+      return acc + (parseFloat(taxVal) || 0);
+    }, 0);
+
+    // Sum of Total Net Income
+    const totalIncomeSum = totalProfitSum + (totalDividendSum - totalTaxSum);
     
     return {
       totalStocks,
@@ -156,7 +186,11 @@ function App() {
       totalTargetPrice,
       totalBuyAmount,
       totalSellAmount,
-      totalRemainingTarget
+      totalRemainingTarget,
+      totalProfitSum,
+      totalDividendSum,
+      totalTaxSum,
+      totalIncomeSum
     };
   }, [mainTabData]);
 
@@ -234,28 +268,52 @@ function App() {
           delay={0.2}
         />
         <SummaryCard 
-          label="รวมราคาตั้งซื้อ" 
+          label="ราคาตั้งซื้อทั้งหมด" 
           value={formatCurrency(summary.totalTargetPrice)} 
           icon={<DollarSign size={20} color="var(--primary)" />}
           delay={0.3}
         />
         <SummaryCard 
-          label="รวมยอดตั้งซื้อ" 
+          label="ยอดตั้งซื้อทั้งหมด" 
           value={formatCurrency(summary.totalRemainingTarget)} 
           icon={<Activity size={20} color="var(--warning)" />}
           delay={0.4}
         />
         <SummaryCard 
-          label="รวมยอดซื้อรวม" 
+          label="ยอดซื้อรวมทั้งหมด" 
           value={formatCurrency(summary.totalBuyAmount)} 
           icon={<DollarSign size={20} color="var(--success)" />}
           delay={0.5}
         />
         <SummaryCard 
-          label="รวมยอดขายรวม" 
+          label="ยอดขายรวมทั้งหมด" 
           value={formatCurrency(summary.totalSellAmount)} 
           icon={<DollarSign size={20} color="var(--error)" />}
           delay={0.6}
+        />
+        <SummaryCard 
+          label="ยอดกำไรรวมทั้งหมด" 
+          value={formatCurrency(summary.totalProfitSum)} 
+          icon={<TrendingUp size={20} color={summary.totalProfitSum >= 0 ? "var(--success)" : "var(--error)"} />}
+          delay={0.7}
+        />
+        <SummaryCard 
+          label="ยอดปันผลทั้งหมด" 
+          value={formatCurrency(summary.totalDividendSum)} 
+          icon={<DollarSign size={20} color="var(--success)" />}
+          delay={0.8}
+        />
+        <SummaryCard 
+          label="ยอดภาษีทั้งหมด" 
+          value={formatCurrency(summary.totalTaxSum)} 
+          icon={<DollarSign size={20} color="var(--error)" />}
+          delay={0.9}
+        />
+        <SummaryCard 
+          label="รายได้ทั้งหมด" 
+          value={formatCurrency(summary.totalIncomeSum)} 
+          icon={<TrendingUp size={20} color={summary.totalIncomeSum >= 0 ? "var(--success)" : "var(--error)"} />}
+          delay={1.0}
         />
       </div>
 
@@ -353,8 +411,14 @@ function StockCard({ stock, index, onUpdateClick }) {
     </div>
   );
 
-  const targetAmount = calculateTargetAmount(stock["วันที่กำหนด"], stock["ราคาตั้งซื้อ ($)"]);
-  const remainingTarget = targetAmount - (parseFloat(stock["ยอดซื้อ ($)"]) || 0);
+  const targetPrice = parseFloat(stock["ราคาตั้งซื้อ ($)"]) || 0;
+  const targetAmount = targetPrice > 0 ? calculateTargetAmount(stock["วันที่กำหนด"], stock["ราคาตั้งซื้อ ($)"]) : 0;
+  const remainingTarget = targetPrice > 0 ? targetAmount - (parseFloat(stock["ยอดซื้อ ($)"]) || 0) : 0;
+  const totalProfit = stock["สถานะ"] === "ขายแล้ว"
+    ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
+    : 0;
+  const taxVal = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
+  const netIncome = totalProfit + ((parseFloat(stock["ยอดปันผล ($)"]) || 0) - (parseFloat(taxVal) || 0));
 
   const getStatusColor = (val) => {
     if (val === 0) return 'status-grey';
@@ -393,39 +457,74 @@ function StockCard({ stock, index, onUpdateClick }) {
         </a>
         
         <div className="stock-info">
-          <h3>{stock["ชื่อบริษัท"]} <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>({ticker})</span></h3>
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignItems: 'center' }}>
+          <h3>
+            {stock["ชื่อบริษัท"]}{' '}
+            <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>({ticker})</span>
+            {stock["มูลค่าตลาด ($)"] && (
+              <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.8rem', marginLeft: '0.5rem' }}>
+                • มูลค่าตลาด {formatCurrency(parseFloat(stock["มูลค่าตลาด ($)"]) || 0)}
+              </span>
+            )}
+          </h3>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <span className="market-tag">{stock["ตลาด"]}</span>
             <span className="text-muted" style={{ fontSize: '0.85rem' }}>{stock["ประเภท"]}</span>
             {stock["ลำดับการซื้อ"] && <span className="order-tag">ลำดับที่ {stock["ลำดับการซื้อ"]}</span>}
+            {stock["สถานะ"] && (
+              <span className={`status-badge ${
+                stock["สถานะ"] === 'ถืออยู่' ? 'status-badge-holding' : 
+                stock["สถานะ"] === 'ขายบางส่วน' ? 'status-badge-partial' : 
+                stock["สถานะ"].includes('ขาย') ? 'status-badge-sold' : 'status-badge-other'
+              }`}>
+                {stock["สถานะ"]}
+              </span>
+            )}
           </div>
         </div>
 
         <div className="stock-stats">
+          <span className="detail-label" style={{ display: 'block', marginBottom: '0.15rem' }}>ราคาหุ้น</span>
           <div className="price-value">${(parseFloat(stock["ราคาหุ้น ($)"]) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          <div className="dividend-tag">ปันผล {stock["อัตราปันผล (%)"]}%</div>
+          <div className="dividend-tag" style={{ marginTop: '0.25rem', display: 'inline-block' }}>ปันผล {stock["อัตราปันผล (%)"]}%</div>
         </div>
       </div>
 
       <div className="stock-details-grid">
         <DetailItem label="ราคาตั้งซื้อ" value={stock["ราคาตั้งซื้อ ($)"]} isMoney={true} />
         <DetailItem label="ยอดตั้งซื้อ" value={remainingTarget} isMoney={true} colorClass={getStatusColor(remainingTarget)} />
-        <DetailItem label="ยอดซื้อรวม" value={stock["ยอดซื้อ ($)"]} isMoney={true} />
-        <DetailItem label="ยอดขายรวม" value={stock["ยอดขาย ($)"]} isMoney={true} />
-        <DetailItem 
-          label="ซื้อล่าสุด" 
-          value={formatDate(stock["วันที่ซื้อล่าสุด"])} 
-          relativeTime={getRelativeTime(stock["วันที่ซื้อล่าสุด"])}
-          colorClass={getTimeColor(stock["วันที่ซื้อล่าสุด"])}
-        />
-        <DetailItem 
-          label="ขายล่าสุด" 
-          value={formatDate(stock["วันที่ขายล่าสุด"])} 
-          relativeTime={getRelativeTime(stock["วันที่ขายล่าสุด"])} 
-        />
+        <DetailItem label="ยอดซื้อ" value={stock["ยอดซื้อ ($)"]} isMoney={true} />
+        <DetailItem label="ยอดขาย" value={stock["ยอดขาย ($)"]} isMoney={true} />
+        <DetailItem label="ยอดกำไร" value={totalProfit} isMoney={true} colorClass={getStatusColor(totalProfit)} />
+        <DetailItem label="ยอดปันผล" value={stock["ยอดปันผล ($)"]} isMoney={true} />
+        <DetailItem label="ยอดภาษี" value={taxVal} isMoney={true} />
+        <DetailItem label="รายได้" value={netIncome} isMoney={true} colorClass={getStatusColor(netIncome)} />
       </div>
 
-      <div className="stock-card-footer">
+      <div className="stock-card-footer" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className={getTimeColor(stock["วันที่ซื้อล่าสุด"])} style={{ display: 'flex', gap: '0.375rem', alignItems: 'baseline' }}>
+            <span className="detail-label" style={{ fontSize: '0.7rem' }}>ซื้อล่าสุด:</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
+              {formatDate(stock["วันที่ซื้อล่าสุด"]) || '-'}
+              {stock["วันที่ซื้อล่าสุด"] && (
+                <span className="relative-time" style={{ fontSize: '0.7rem', marginLeft: '0.25rem' }}>
+                  {getRelativeTime(stock["วันที่ซื้อล่าสุด"])}
+                </span>
+              )}
+            </span>
+          </div>
+          {stock["วันที่ขายล่าสุด"] && (
+            <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'baseline' }}>
+              <span className="detail-label" style={{ fontSize: '0.7rem' }}>ขายล่าสุด:</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                {formatDate(stock["วันที่ขายล่าสุด"])}
+                <span className="relative-time" style={{ fontSize: '0.7rem', marginLeft: '0.25rem' }}>
+                  {getRelativeTime(stock["วันที่ขายล่าสุด"])}
+                </span>
+              </span>
+            </div>
+          )}
+        </div>
         <button 
           className="update-card-btn"
           onClick={() => onUpdateClick(stock)}
