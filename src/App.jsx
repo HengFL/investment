@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { TrendingUp, PieChart, DollarSign, Activity, ExternalLink, RefreshCw, Edit, X, CheckCircle2, AlertCircle, Calendar, Search, Calculator, ArrowUp, ArrowDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbwkjycorGKU-NDKVxETVhEC_BiKHhSuuUhMX4uZhDTIYi5KuoPjtIu5FzwE3Ahhc1HZ/exec';
@@ -438,7 +437,7 @@ function App() {
           onClick={fetchData} 
           disabled={loading}
         >
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+          <i className={`fa-solid fa-arrows-rotate ${loading ? 'animate-spin' : ''}`} style={{ fontSize: '18px' }}></i>
           <span>{loading ? 'กำลังรีเฟรช...' : 'รีเฟรชข้อมูล'}</span>
         </button>
       </header>
@@ -473,13 +472,13 @@ function App() {
         <SummaryCard 
           label="จำนวนหุ้น" 
           value={summary.totalStocks} 
-          icon={<PieChart size={20} color="var(--secondary)" />}
+          icon={<i className="fa-solid fa-chart-pie" style={{ fontSize: '20px', color: 'var(--secondary)' }}></i>}
           delay={0.1}
         />
         <SummaryCard 
           label="ปันผลเฉลี่ย" 
           value={`${summary.avgDividend.toFixed(2)}%`} 
-          icon={<TrendingUp size={20} color="var(--success)" />}
+          icon={<i className="fa-solid fa-percent" style={{ fontSize: '20px', color: 'var(--success)' }}></i>}
           delay={0.2}
           numValue={summary.avgDividend}
           colorMode="binary"
@@ -488,7 +487,7 @@ function App() {
           label="ราคาตั้งซื้อทั้งหมด" 
           value={formatCurrency(summary.totalTargetPrice)} 
           subValue={formatTHB(summary.totalTargetPrice * exchangeRate)}
-          icon={<DollarSign size={20} color="var(--primary)" />}
+          icon={<i className="fa-solid fa-bullseye" style={{ fontSize: '20px', color: 'var(--primary)' }}></i>}
           delay={0.3}
           numValue={summary.totalTargetPrice}
           colorMode="binary"
@@ -497,7 +496,7 @@ function App() {
           label="ยอดตั้งซื้อทั้งหมด" 
           value={formatCurrency(summary.totalRemainingTarget)} 
           subValue={formatTHB(summary.totalRemainingTarget * exchangeRate)}
-          icon={<Activity size={20} color="var(--warning)" />}
+          icon={<i className="fa-solid fa-bars-progress" style={{ fontSize: '20px', color: 'var(--warning)' }}></i>}
           delay={0.4}
           numValue={summary.totalRemainingTarget}
         />
@@ -505,21 +504,21 @@ function App() {
           label="ยอดซื้อทั้งหมด" 
           value={formatCurrency(summary.totalBuyAmount)} 
           subValue={formatTHB(summary.totalBuyAmount * exchangeRate)}
-          icon={<DollarSign size={20} color="var(--success)" />}
+          icon={<i className="fa-solid fa-cart-shopping" style={{ fontSize: '20px', color: 'var(--success)' }}></i>}
           delay={0.5}
         />
         <SummaryCard 
           label="ยอดขายทั้งหมด" 
           value={formatCurrency(summary.totalSellAmount)} 
           subValue={formatTHB(summary.totalSellAmount * exchangeRate)}
-          icon={<DollarSign size={20} color="var(--error)" />}
+          icon={<i className="fa-solid fa-hand-holding-dollar" style={{ fontSize: '20px', color: 'var(--error)' }}></i>}
           delay={0.6}
         />
         <SummaryCard 
           label="ยอดกำไรทั้งหมด" 
           value={formatCurrency(summary.totalProfitSum)} 
           subValue={formatTHB(summary.totalProfitSum * exchangeRate)}
-          icon={<TrendingUp size={20} color={summary.totalProfitSum >= 0 ? "var(--success)" : "var(--error)"} />}
+          icon={<i className="fa-solid fa-arrow-trend-up" style={{ fontSize: '20px', color: summary.totalProfitSum >= 0 ? 'var(--success)' : 'var(--error)' }}></i>}
           delay={0.7}
           numValue={summary.totalProfitSum}
         />
@@ -527,7 +526,7 @@ function App() {
           label="ยอดปันผลทั้งหมด" 
           value={formatCurrency(summary.totalDividendSum)} 
           subValue={formatTHB(summary.totalDividendSum * exchangeRate)}
-          icon={<DollarSign size={20} color="var(--success)" />}
+          icon={<i className="fa-solid fa-coins" style={{ fontSize: '20px', color: 'var(--success)' }}></i>}
           delay={0.8}
           numValue={summary.totalDividendSum}
           colorMode="binary"
@@ -536,7 +535,7 @@ function App() {
           label="ยอดภาษีทั้งหมด" 
           value={formatCurrency(summary.totalTaxSum)} 
           subValue={formatTHB(summary.totalTaxSum * exchangeRate)}
-          icon={<DollarSign size={20} color="var(--error)" />}
+          icon={<i className="fa-solid fa-file-invoice-dollar" style={{ fontSize: '20px', color: 'var(--error)' }}></i>}
           delay={0.9}
           numValue={summary.totalTaxSum}
           colorMode="binary"
@@ -545,7 +544,7 @@ function App() {
           label="รายได้ทั้งหมด" 
           value={formatCurrency(summary.totalIncomeSum)} 
           subValue={formatTHB(summary.totalIncomeSum * exchangeRate)}
-          icon={<TrendingUp size={20} color={summary.totalIncomeSum >= 0 ? "var(--success)" : "var(--error)"} />}
+          icon={<i className="fa-solid fa-wallet" style={{ fontSize: '20px', color: summary.totalIncomeSum >= 0 ? 'var(--success)' : 'var(--error)' }}></i>}
           delay={1.0}
           numValue={summary.totalIncomeSum}
         />
@@ -593,7 +592,7 @@ function App() {
         
         <div className="search-and-sort-container">
           <div className="search-container">
-            <Search size={16} className="search-icon" />
+            <i className="fa-solid fa-magnifying-glass search-icon" style={{ fontSize: '16px' }}></i>
             <input
               type="text"
               placeholder="ค้นหาชื่อหุ้น, บริษัท, ตลาด..."
@@ -607,7 +606,7 @@ function App() {
                 onClick={() => setSearchQuery('')}
                 title="ล้างคำค้นหา"
               >
-                <X size={16} />
+                <i className="fa-solid fa-xmark" style={{ fontSize: '16px' }}></i>
               </button>
             )}
           </div>
@@ -641,7 +640,7 @@ function App() {
               onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
               title={sortOrder === 'asc' ? 'เรียงจากน้อยไปมาก' : 'เรียงจากมากไปน้อย'}
             >
-              {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+              {sortOrder === 'asc' ? <i className="fa-solid fa-arrow-up-wide-short" style={{ fontSize: '16px' }}></i> : <i className="fa-solid fa-arrow-down-wide-short" style={{ fontSize: '16px' }}></i>}
             </button>
           </div>
         </div>
@@ -677,7 +676,7 @@ function App() {
                       onClick={() => setSearchQuery('')}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.45rem 1rem' }}
                     >
-                      <X size={14} />
+                      <i className="fa-solid fa-xmark" style={{ fontSize: '14px' }}></i>
                       ล้างคำค้นหา
                     </button>
                   </>
@@ -1002,7 +1001,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
           className="update-card-btn"
           onClick={() => onUpdateClick(stock)}
         >
-          <Edit size={14} />
+          <i className="fa-solid fa-pen-to-square" style={{ fontSize: '14px' }}></i>
           อัปเดต
         </button>
       </div>
@@ -1209,7 +1208,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
       >
         <div className="calc-header">
           <div className="calc-title">
-            <Calculator size={14} color="var(--primary)" />
+            <i className="fa-solid fa-calculator" style={{ fontSize: '14px', color: 'var(--primary)' }}></i>
             <span>เครื่องคิดเลข</span>
           </div>
           <button 
@@ -1221,7 +1220,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
               setActiveCalcField(null);
             }}
           >
-            <X size={14} />
+            <i className="fa-solid fa-xmark" style={{ fontSize: '14px' }}></i>
           </button>
         </div>
         
@@ -1354,7 +1353,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
       >
         {status === 'success' ? (
           <div className="modal-status-screen success">
-            <CheckCircle2 size={56} className="status-icon success-icon animate-bounce" />
+            <i className="fa-solid fa-circle-check status-icon success-icon animate-bounce" style={{ fontSize: '56px' }}></i>
             <h3>อัปเดตข้อมูลสำเร็จ!</h3>
             <p className="text-muted">{statusMessage}</p>
             <div className="loading-dots">
@@ -1366,7 +1365,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
           </div>
         ) : status === 'error' ? (
           <div className="modal-status-screen error">
-            <AlertCircle size={56} className="status-icon error-icon" />
+            <i className="fa-solid fa-circle-exclamation status-icon error-icon" style={{ fontSize: '56px' }}></i>
             <h3>เกิดข้อผิดพลาด</h3>
             <p className="status-error-text">{statusMessage}</p>
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', width: '100%' }}>
@@ -1410,7 +1409,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
               </div>
 
               <button type="button" className="modal-close-btn" onClick={onClose}>
-                <X size={18} />
+                <i className="fa-solid fa-xmark" style={{ fontSize: '18px' }}></i>
               </button>
             </div>
 
@@ -1432,7 +1431,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
               <div className="form-row-2">
                 <div className="form-group">
                   <label className="form-label">
-                    <Calendar size={14} style={{ marginRight: '4px' }} />
+                    <i className="fa-solid fa-calendar-days" style={{ fontSize: '14px', marginRight: '4px' }}></i>
                     วันที่ซื้อล่าสุด
                   </label>
                   <input 
@@ -1445,7 +1444,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">
-                    <Calendar size={14} style={{ marginRight: '4px' }} />
+                    <i className="fa-solid fa-calendar-days" style={{ fontSize: '14px', marginRight: '4px' }}></i>
                     วันที่ขายล่าสุด
                   </label>
                   <input 
@@ -1477,7 +1476,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                       onClick={() => openCalculator('buyAmount', buyAmount)}
                       title="เปิดเครื่องคิดเลข"
                     >
-                      <Calculator size={14} />
+                      <i className="fa-solid fa-calculator" style={{ fontSize: '14px' }}></i>
                     </button>
                     {activeCalcField === 'buyAmount' && renderCalculatorPopover('buyAmount')}
                   </div>
@@ -1501,7 +1500,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                       onClick={() => openCalculator('sellAmount', sellAmount)}
                       title="เปิดเครื่องคิดเลข"
                     >
-                      <Calculator size={14} />
+                      <i className="fa-solid fa-calculator" style={{ fontSize: '14px' }}></i>
                     </button>
                     {activeCalcField === 'sellAmount' && renderCalculatorPopover('sellAmount')}
                   </div>
@@ -1528,7 +1527,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                       onClick={() => openCalculator('dividendAmount', dividendAmount)}
                       title="เปิดเครื่องคิดเลข"
                     >
-                      <Calculator size={14} />
+                      <i className="fa-solid fa-calculator" style={{ fontSize: '14px' }}></i>
                     </button>
                     {activeCalcField === 'dividendAmount' && renderCalculatorPopover('dividendAmount')}
                   </div>
@@ -1552,7 +1551,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                       onClick={() => openCalculator('taxAmount', taxAmount)}
                       title="เปิดเครื่องคิดเลข"
                     >
-                      <Calculator size={14} />
+                      <i className="fa-solid fa-calculator" style={{ fontSize: '14px' }}></i>
                     </button>
                     {activeCalcField === 'taxAmount' && renderCalculatorPopover('taxAmount')}
                   </div>
@@ -1568,7 +1567,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
               <button type="submit" className="form-btn submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <span className="spinner-container">
-                    <RefreshCw size={14} className="animate-spin" />
+                    <i className="fa-solid fa-arrows-rotate animate-spin" style={{ fontSize: '14px' }}></i>
                     กำลังบันทึก...
                   </span>
                 ) : 'บันทึก'}
