@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { TrendingUp, PieChart, DollarSign, Activity, ExternalLink, RefreshCw, Edit, X, CheckCircle2, AlertCircle, Calendar, Search } from 'lucide-react';
+import { TrendingUp, PieChart, DollarSign, Activity, ExternalLink, RefreshCw, Edit, X, CheckCircle2, AlertCircle, Calendar, Search, Calculator } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbwkjycorGKU-NDKVxETVhEC_BiKHhSuuUhMX4uZhDTIYi5KuoPjtIu5FzwE3Ahhc1HZ/exec';
@@ -356,6 +356,10 @@ function App() {
       </div>
 
       {/* Mini Dashboard Summary */}
+      <h2 className="section-title animate-fade-in">
+        <span>ภาพรวมพอร์ต</span>
+        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)', background: 'rgba(79, 70, 229, 0.08)', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>{activeMainTab}</span>
+      </h2>
       <div className="summary-grid">
         <SummaryCard 
           label="จำนวนหุ้น" 
@@ -439,6 +443,12 @@ function App() {
       </div>
 
       {/* List Controls: Sub Tabs & Search */}
+      <h2 className="section-title animate-fade-in" style={{ marginBottom: '1rem' }}>
+        <span>รายการสินทรัพย์</span>
+        {activeSubTab !== 'All' && (
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--secondary)', background: 'rgba(219, 39, 119, 0.08)', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>{activeSubTab}</span>
+        )}
+      </h2>
       <div className="list-controls-container">
         <div className="tabs-container">
           {/* Tab All at the very front */}
@@ -544,6 +554,7 @@ function App() {
         {selectedStock && (
           <UpdateModal 
             stock={selectedStock} 
+            exchangeRate={exchangeRate}
             onClose={() => setSelectedStock(null)} 
             onUpdateSuccess={fetchData} 
           />
@@ -855,7 +866,28 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
   );
 }
 
-function UpdateModal({ stock, onClose, onUpdateSuccess }) {
+function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
+  const targetPrice = parseFloat(stock["ราคาตั้งซื้อ ($)"]) || 0;
+  const targetAmount = targetPrice > 0 ? calculateTargetAmount(stock["วันที่กำหนด"], stock["ราคาตั้งซื้อ ($)"]) : 0;
+  const remainingTarget = (stock.port === 'Trade' || targetPrice <= 0)
+    ? 0
+    : targetAmount - (parseFloat(stock["ยอดซื้อ ($)"]) || 0) + (parseFloat(stock["ยอดขาย ($)"]) || 0);
+
+  const originalBuyDate = stock["วันที่ซื้อล่าสุด"] ? formatDate(stock["วันที่ซื้อล่าสุด"]) : 'ไม่มี';
+  const originalSellDate = stock["วันที่ขายล่าสุด"] ? formatDate(stock["วันที่ขายล่าสุด"]) : 'ไม่มี';
+
+  const formatOriginalMoney = (val) => {
+    const num = parseFloat(val) || 0;
+    return `$${num.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  };
+
+  const originalBuyAmount = formatOriginalMoney(stock["ยอดซื้อ ($)"]);
+  const originalSellAmount = formatOriginalMoney(stock["ยอดขาย ($)"]);
+  const originalDividendAmount = formatOriginalMoney(stock["ยอดปันผล ($)"]);
+  
+  const origTax = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
+  const originalTaxAmount = formatOriginalMoney(origTax);
+
   const [lastBuyDate, setLastBuyDate] = useState(() => {
     if (stock["วันที่ซื้อล่าสุด"]) {
       try {
@@ -903,6 +935,215 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState('idle'); // 'idle' | 'success' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
+
+  const [activeCalcField, setActiveCalcField] = useState(null); // 'buyAmount' | 'sellAmount' | 'dividendAmount' | 'taxAmount' | null
+  const [calcExpression, setCalcExpression] = useState('');
+  const [calcResult, setCalcResult] = useState('');
+
+  const openCalculator = (fieldName, currentValue) => {
+    setActiveCalcField(fieldName);
+    setCalcExpression(currentValue ? currentValue.toString() : '');
+    setCalcResult(currentValue ? currentValue.toString() : '');
+  };
+
+  const handleCalcKeyPress = (key) => {
+    if (key === 'C') {
+      setCalcExpression('');
+      setCalcResult('');
+    } else if (key === '⌫') {
+      setCalcExpression(prev => {
+        const clean = prev.trim();
+        if (clean.endsWith('+') || clean.endsWith('-') || clean.endsWith('×') || clean.endsWith('÷')) {
+          // Remove operator and surrounding spaces
+          return prev.slice(0, -3);
+        }
+        return prev.slice(0, -1);
+      });
+    } else if (key === '=') {
+      evaluateExpression();
+    } else if (['+', '-', '×', '÷'].includes(key)) {
+      setCalcExpression(prev => {
+        if (!prev) return '';
+        const clean = prev.trim();
+        if (clean.endsWith('+') || clean.endsWith('-') || clean.endsWith('×') || clean.endsWith('÷')) {
+          // Replace operator
+          return prev.slice(0, -3) + ` ${key} `;
+        }
+        return prev + ` ${key} `;
+      });
+    } else {
+      setCalcExpression(prev => prev + key);
+    }
+  };
+
+  const evaluateExpression = () => {
+    if (!calcExpression) return;
+    let formula = calcExpression.replace(/×/g, '*').replace(/÷/g, '/');
+    const sanitized = formula.replace(/[^0-9+\-*/().\s]/g, '');
+    try {
+      if (!sanitized.trim()) return;
+      const evalFn = new Function(`return (${sanitized})`);
+      const res = evalFn();
+      if (res === null || res === undefined || isNaN(res)) {
+        setCalcResult('Error');
+        return;
+      }
+      const formatted = Number.isInteger(res) ? res.toString() : parseFloat(res.toFixed(4)).toString();
+      setCalcResult(formatted);
+      setCalcExpression(formatted);
+    } catch (e) {
+      setCalcResult('Error');
+    }
+  };
+
+  useEffect(() => {
+    if (!calcExpression) {
+      setCalcResult('');
+      return;
+    }
+    
+    let cleanExpr = calcExpression.trim();
+    if (cleanExpr.endsWith('+') || cleanExpr.endsWith('×') || cleanExpr.endsWith('÷') || cleanExpr.endsWith('-')) {
+      cleanExpr = cleanExpr.slice(0, -1).trim();
+    }
+    
+    if (!cleanExpr) {
+      setCalcResult('');
+      return;
+    }
+
+    let formula = cleanExpr.replace(/×/g, '*').replace(/÷/g, '/');
+    const sanitized = formula.replace(/[^0-9+\-*/().\s]/g, '');
+    try {
+      const evalFn = new Function(`return (${sanitized})`);
+      const res = evalFn();
+      if (res !== null && res !== undefined && !isNaN(res)) {
+        const formatted = Number.isInteger(res) ? res.toString() : parseFloat(res.toFixed(4)).toString();
+        setCalcResult(formatted);
+      }
+    } catch (e) {
+      // Silent error during live preview
+    }
+  }, [calcExpression]);
+
+  const handleApplyCalc = () => {
+    let finalValue = calcResult || calcExpression;
+    if (finalValue === 'Error') return;
+    
+    const num = parseFloat(finalValue);
+    const resultStr = isNaN(num) ? '' : num.toString();
+
+    if (activeCalcField === 'buyAmount') setBuyAmount(resultStr);
+    else if (activeCalcField === 'sellAmount') setSellAmount(resultStr);
+    else if (activeCalcField === 'dividendAmount') setDividendAmount(resultStr);
+    else if (activeCalcField === 'taxAmount') setTaxAmount(resultStr);
+
+    setActiveCalcField(null);
+  };
+
+  const popoverRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target) && !event.target.closest('.input-action-btn')) {
+        setActiveCalcField(null);
+      }
+    };
+    if (activeCalcField) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [activeCalcField]);
+
+  const renderCalculatorPopover = (fieldName) => {
+    return (
+      <div 
+        ref={popoverRef}
+        className="calculator-popover popover-right popover-up"
+      >
+        <div className="calc-header">
+          <div className="calc-title">
+            <Calculator size={14} color="var(--primary)" />
+            <span>เครื่องคิดเลข</span>
+          </div>
+          <button 
+            type="button" 
+            className="modal-close-btn" 
+            style={{ padding: '2px' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveCalcField(null);
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+        
+        <div className="calc-display">
+          <div className="calc-display-expression">
+            {calcExpression || '0'}
+          </div>
+          <div className="calc-display-result">
+            {calcResult || calcExpression || '0'}
+          </div>
+        </div>
+        
+        <div className="calc-grid" style={{ minHeight: '160px' }}>
+          <button type="button" className="calc-btn clear" onClick={() => handleCalcKeyPress('C')}>C</button>
+          <button type="button" className="calc-btn operator" onClick={() => handleCalcKeyPress('(')}>(</button>
+          <button type="button" className="calc-btn operator" onClick={() => handleCalcKeyPress(')')}>)</button>
+          <button type="button" className="calc-btn operator" onClick={() => handleCalcKeyPress('÷')}>÷</button>
+          
+          <button type="button" className="calc-btn" onClick={() => handleCalcKeyPress('7')}>7</button>
+          <button type="button" className="calc-btn" onClick={() => handleCalcKeyPress('8')}>8</button>
+          <button type="button" className="calc-btn" onClick={() => handleCalcKeyPress('9')}>9</button>
+          <button type="button" className="calc-btn operator" onClick={() => handleCalcKeyPress('×')}>×</button>
+          
+          <button type="button" className="calc-btn" onClick={() => handleCalcKeyPress('4')}>4</button>
+          <button type="button" className="calc-btn" onClick={() => handleCalcKeyPress('5')}>5</button>
+          <button type="button" className="calc-btn" onClick={() => handleCalcKeyPress('6')}>6</button>
+          <button type="button" className="calc-btn operator" onClick={() => handleCalcKeyPress('-')}>-</button>
+          
+          <button type="button" className="calc-btn" onClick={() => handleCalcKeyPress('1')}>1</button>
+          <button type="button" className="calc-btn" onClick={() => handleCalcKeyPress('2')}>2</button>
+          <button type="button" className="calc-btn" onClick={() => handleCalcKeyPress('3')}>3</button>
+          <button type="button" className="calc-btn operator" onClick={() => handleCalcKeyPress('+')}>+</button>
+          
+          <button type="button" className="calc-btn" onClick={() => handleCalcKeyPress('0')}>0</button>
+          <button type="button" className="calc-btn" onClick={() => handleCalcKeyPress('.')}>.</button>
+          <button type="button" className="calc-btn clear" onClick={() => handleCalcKeyPress('⌫')}>⌫</button>
+          <button type="button" className="calc-btn equals" onClick={() => handleCalcKeyPress('=')}>=</button>
+        </div>
+        
+        <div className="calc-footer">
+          <button 
+            type="button" 
+            className="form-btn cancel" 
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveCalcField(null);
+            }} 
+            style={{ flex: 1, padding: '0.35rem' }}
+          >
+            ยกเลิก
+          </button>
+          <button 
+            type="button" 
+            className="form-btn submit" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleApplyCalc();
+            }} 
+            style={{ flex: 1, padding: '0.35rem' }}
+          >
+            ตกลง
+          </button>
+        </div>
+      </div>
+    );
+  };
 
 
 
@@ -995,7 +1236,7 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            <div className="modal-header">
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                 <div className="modal-stock-icon">
                   <img 
@@ -1016,12 +1257,34 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
                   <p className="modal-subtitle">{stock["ชื่อบริษัท"]} • พอร์ต: <span className="highlight-tag">{stock.port}</span></p>
                 </div>
               </div>
+              
+              <div style={{ marginLeft: 'auto', marginRight: '0.875rem', textAlign: 'right' }}>
+                <span style={{ display: 'block', fontSize: '0.675rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.025em', lineHeight: 1.2 }}>ราคาหุ้น</span>
+                <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.2 }}>
+                  ${(parseFloat(stock["ราคาหุ้น ($)"]) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
               <button type="button" className="modal-close-btn" onClick={onClose}>
                 <X size={18} />
               </button>
             </div>
 
             <div className="modal-body">
+              <div className="target-summary-ref">
+                <div className="target-ref-card">
+                  <span className="target-ref-label">ราคาตั้งซื้อ</span>
+                  <span className="target-ref-value">${targetPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="target-summary-divider"></div>
+                <div className="target-ref-card">
+                  <span className="target-ref-label">ยอดตั้งซื้อ</span>
+                  <span className={`target-ref-value ${remainingTarget > 0 ? 'text-green' : remainingTarget < 0 ? 'text-red' : ''}`}>
+                    ${remainingTarget.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
               <div className="form-row-2">
                 <div className="form-group">
                   <label className="form-label">
@@ -1034,6 +1297,7 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
                     value={lastBuyDate} 
                     onChange={(e) => setLastBuyDate(e.target.value)}
                   />
+                  <span className="input-helper-text">ค่าเดิม: {originalBuyDate}</span>
                 </div>
                 <div className="form-group">
                   <label className="form-label">
@@ -1046,60 +1310,109 @@ function UpdateModal({ stock, onClose, onUpdateSuccess }) {
                     value={lastSellDate} 
                     onChange={(e) => setLastSellDate(e.target.value)}
                   />
+                  <span className="input-helper-text">ค่าเดิม: {originalSellDate}</span>
                 </div>
               </div>
 
               <div className="form-row-2">
                 <div className="form-group">
                   <label className="form-label">ยอดซื้อ ($)</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    min="0"
-                    placeholder="0.00"
-                    className="form-input" 
-                    value={buyAmount} 
-                    onChange={(e) => setBuyAmount(e.target.value)}
-                  />
+                  <div className="input-with-button">
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      min="0"
+                      placeholder="0.00"
+                      className="form-input" 
+                      value={buyAmount} 
+                      onChange={(e) => setBuyAmount(e.target.value)}
+                    />
+                    <button 
+                      type="button" 
+                      className="input-action-btn" 
+                      onClick={() => openCalculator('buyAmount', buyAmount)}
+                      title="เปิดเครื่องคิดเลข"
+                    >
+                      <Calculator size={14} />
+                    </button>
+                    {activeCalcField === 'buyAmount' && renderCalculatorPopover('buyAmount')}
+                  </div>
+                  <span className="input-helper-text">ค่าเดิม: {originalBuyAmount}</span>
                 </div>
                 <div className="form-group">
                   <label className="form-label">ยอดขาย ($)</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    min="0"
-                    placeholder="0.00"
-                    className="form-input" 
-                    value={sellAmount} 
-                    onChange={(e) => setSellAmount(e.target.value)}
-                  />
+                  <div className="input-with-button">
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      min="0"
+                      placeholder="0.00"
+                      className="form-input" 
+                      value={sellAmount} 
+                      onChange={(e) => setSellAmount(e.target.value)}
+                    />
+                    <button 
+                      type="button" 
+                      className="input-action-btn" 
+                      onClick={() => openCalculator('sellAmount', sellAmount)}
+                      title="เปิดเครื่องคิดเลข"
+                    >
+                      <Calculator size={14} />
+                    </button>
+                    {activeCalcField === 'sellAmount' && renderCalculatorPopover('sellAmount')}
+                  </div>
+                  <span className="input-helper-text">ค่าเดิม: {originalSellAmount}</span>
                 </div>
               </div>
 
               <div className="form-row-2">
                 <div className="form-group">
                   <label className="form-label">ยอดปันผล ($)</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    min="0"
-                    placeholder="0.00"
-                    className="form-input" 
-                    value={dividendAmount} 
-                    onChange={(e) => setDividendAmount(e.target.value)}
-                  />
+                  <div className="input-with-button">
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      min="0"
+                      placeholder="0.00"
+                      className="form-input" 
+                      value={dividendAmount} 
+                      onChange={(e) => setDividendAmount(e.target.value)}
+                    />
+                    <button 
+                      type="button" 
+                      className="input-action-btn" 
+                      onClick={() => openCalculator('dividendAmount', dividendAmount)}
+                      title="เปิดเครื่องคิดเลข"
+                    >
+                      <Calculator size={14} />
+                    </button>
+                    {activeCalcField === 'dividendAmount' && renderCalculatorPopover('dividendAmount')}
+                  </div>
+                  <span className="input-helper-text">ค่าเดิม: {originalDividendAmount}</span>
                 </div>
                 <div className="form-group">
                   <label className="form-label">ภาษี ($)</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    min="0"
-                    placeholder="0.00"
-                    className="form-input" 
-                    value={taxAmount} 
-                    onChange={(e) => setTaxAmount(e.target.value)}
-                  />
+                  <div className="input-with-button">
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      min="0"
+                      placeholder="0.00"
+                      className="form-input" 
+                      value={taxAmount} 
+                      onChange={(e) => setTaxAmount(e.target.value)}
+                    />
+                    <button 
+                      type="button" 
+                      className="input-action-btn" 
+                      onClick={() => openCalculator('taxAmount', taxAmount)}
+                      title="เปิดเครื่องคิดเลข"
+                    >
+                      <Calculator size={14} />
+                    </button>
+                    {activeCalcField === 'taxAmount' && renderCalculatorPopover('taxAmount')}
+                  </div>
+                  <span className="input-helper-text">ค่าเดิม: {originalTaxAmount}</span>
                 </div>
               </div>
             </div>
