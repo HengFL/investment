@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { TrendingUp, PieChart, DollarSign, Activity, ExternalLink, RefreshCw, Edit, X, CheckCircle2, AlertCircle, Calendar, Search, Calculator } from 'lucide-react';
+import { TrendingUp, PieChart, DollarSign, Activity, ExternalLink, RefreshCw, Edit, X, CheckCircle2, AlertCircle, Calendar, Search, Calculator, ArrowUp, ArrowDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbwkjycorGKU-NDKVxETVhEC_BiKHhSuuUhMX4uZhDTIYi5KuoPjtIu5FzwE3Ahhc1HZ/exec';
@@ -119,6 +119,53 @@ const calculateTargetAmount = (startDateStr, pricePerMonth) => {
   }
 };
 
+const getSortValue = (stock, option, originalIdx) => {
+  switch (option) {
+    case 'ลำดับที่': {
+      const order = parseFloat(stock["ลำดับการซื้อ"]);
+      return isNaN(order) ? originalIdx : order;
+    }
+    case 'มูลค่าตลาด':
+      return parseFloat(stock["มูลค่าตลาด ($)"]) || 0;
+    case 'ราคาหุ้น':
+      return parseFloat(stock["ราคาหุ้น ($)"]) || 0;
+    case 'ปันผล':
+      return parseFloat(stock["อัตราปันผล (%)"]) || 0;
+    case 'ราคาตั้งซื้อ':
+      return parseFloat(stock["ราคาตั้งซื้อ ($)"]) || 0;
+    case 'ยอดตั้งซื้อ': {
+      const targetPrice = parseFloat(stock["ราคาตั้งซื้อ ($)"]) || 0;
+      const targetAmount = targetPrice > 0 ? calculateTargetAmount(stock["วันที่กำหนด"], stock["ราคาตั้งซื้อ ($)"]) : 0;
+      return (stock.port === 'Trade' || targetPrice <= 0)
+        ? 0
+        : targetAmount - (parseFloat(stock["ยอดซื้อ ($)"]) || 0) + (parseFloat(stock["ยอดขาย ($)"]) || 0);
+    }
+    case 'ยอดซื้อ':
+      return parseFloat(stock["ยอดซื้อ ($)"]) || 0;
+    case 'ยอดขาย':
+      return parseFloat(stock["ยอดขาย ($)"]) || 0;
+    case 'ยอดกำไร':
+      return stock["สถานะ"] === "ขายแล้ว"
+        ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
+        : 0;
+    case 'ยอดปันผล':
+      return parseFloat(stock["ยอดปันผล ($)"]) || 0;
+    case 'ยอดภาษี': {
+      const taxVal = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
+      return parseFloat(taxVal) || 0;
+    }
+    case 'รายได้': {
+      const totalProfit = stock["สถานะ"] === "ขายแล้ว"
+        ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
+        : 0;
+      const taxVal = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
+      return totalProfit + ((parseFloat(stock["ยอดปันผล ($)"]) || 0) - (parseFloat(taxVal) || 0));
+    }
+    default:
+      return originalIdx;
+  }
+};
+
 const formatCurrency = (val) => {
   const isNegative = val < 0;
   const absVal = Math.abs(val);
@@ -140,7 +187,7 @@ const formatTHB = (val) => {
   else if (absVal >= 1e6) formatted = `${(absVal / 1e6).toFixed(2)}M`;
   else formatted = absVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   
-  return isNegative ? `-฿${formatted}` : `฿${formatted}`;
+  return isNegative ? `≈ -฿${formatted}` : `≈ ฿${formatted}`;
 };
 
 function App() {
@@ -158,6 +205,8 @@ function App() {
   const [activeMainTab, setActiveMainTab] = useState('Hold');
   const [activeSubTab, setActiveSubTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('ลำดับที่');
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
 
   const fetchData = async () => {
     setLoading(true);
@@ -171,7 +220,8 @@ function App() {
       ]);
       
       const json = await stockRes.json();
-      setData(json);
+      const dataWithIndex = json.map((item, idx) => ({ ...item, originalIndex: idx }));
+      setData(dataWithIndex);
       
       if (rateRes && rateRes.ok) {
         const rateJson = await rateRes.json();
@@ -222,6 +272,63 @@ function App() {
              status.includes(query);
     });
   }, [data, activeSubTab, searchQuery, activeMainTab]);
+
+  const sortedData = useMemo(() => {
+    return [...filteredData].sort((a, b) => {
+      const isDateOption = ['ซื้อล่าสุด', 'ขายล่าสุด', 'อายุการถือ'].includes(sortBy);
+      
+      if (isDateOption) {
+        let dateKeyA = '';
+        let dateKeyB = '';
+        if (sortBy === 'ซื้อล่าสุด') {
+          dateKeyA = a["วันที่ซื้อล่าสุด"];
+          dateKeyB = b["วันที่ซื้อล่าสุด"];
+        } else if (sortBy === 'ขายล่าสุด') {
+          dateKeyA = a["วันที่ขายล่าสุด"];
+          dateKeyB = b["วันที่ขายล่าสุด"];
+        } else if (sortBy === 'อายุการถือ') {
+          dateKeyA = a["วันที่ซื้อครั้งแรก"];
+          dateKeyB = b["วันที่ซื้อครั้งแรก"];
+        }
+
+        const hasA = !!dateKeyA;
+        const hasB = !!dateKeyB;
+
+        if (!hasA && !hasB) return 0;
+        if (!hasA) return 1; // b comes first (missing dates placed at the end)
+        if (!hasB) return -1; // a comes first
+
+        const valA = new Date(dateKeyA).getTime();
+        const valB = new Date(dateKeyB).getTime();
+
+        let comparison = 0;
+        if (sortBy === 'อายุการถือ') {
+          comparison = valA - valB; // older date = longer hold = larger holding age
+        } else {
+          comparison = valB - valA; // newer date first
+        }
+
+        return sortOrder === 'asc' ? -comparison : comparison;
+      }
+
+      const valA = getSortValue(a, sortBy, a.originalIndex !== undefined ? a.originalIndex : 0);
+      const valB = getSortValue(b, sortBy, b.originalIndex !== undefined ? b.originalIndex : 0);
+
+      if (valA === valB) return 0;
+      
+      let comparison = valA > valB ? 1 : -1;
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  }, [filteredData, sortBy, sortOrder]);
+
+  const handleSortChange = (newSortBy) => {
+    setSortBy(newSortBy);
+    if (newSortBy === 'ลำดับที่') {
+      setSortOrder('asc');
+    } else {
+      setSortOrder('desc');
+    }
+  };
 
   const subTabCounts = useMemo(() => {
     const counts = {};
@@ -294,6 +401,8 @@ function App() {
     setActiveMainTab(mainTab);
     setActiveSubTab('All');
     setSearchQuery('');
+    setSortBy('ลำดับที่');
+    setSortOrder('asc');
   };
 
   if (error) {
@@ -443,7 +552,7 @@ function App() {
       </div>
 
       {/* List Controls: Sub Tabs & Search */}
-      <h2 className="section-title animate-fade-in" style={{ marginBottom: '1rem' }}>
+      <h2 className="section-title animate-fade-in" style={{ marginBottom: '0.5rem' }}>
         <span>รายการสินทรัพย์</span>
         {activeSubTab !== 'All' && (
           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--secondary)', background: 'rgba(219, 39, 119, 0.08)', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>{activeSubTab}</span>
@@ -482,24 +591,59 @@ function App() {
           })}
         </div>
         
-        <div className="search-container">
-          <Search size={16} className="search-icon" />
-          <input
-            type="text"
-            placeholder="ค้นหาชื่อหุ้น, บริษัท, ตลาด..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-          {searchQuery && (
-            <button 
-              className="clear-search-btn" 
-              onClick={() => setSearchQuery('')}
-              title="ล้างคำค้นหา"
+        <div className="search-and-sort-container">
+          <div className="search-container">
+            <Search size={16} className="search-icon" />
+            <input
+              type="text"
+              placeholder="ค้นหาชื่อหุ้น, บริษัท, ตลาด..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+            {searchQuery && (
+              <button 
+                className="clear-search-btn" 
+                onClick={() => setSearchQuery('')}
+                title="ล้างคำค้นหา"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          <div className="sort-container">
+            <span className="sort-label">เรียงตาม</span>
+            <select 
+              className="sort-select"
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value)}
             >
-              <X size={16} />
+              <option value="ลำดับที่">ลำดับที่</option>
+              <option value="มูลค่าตลาด">มูลค่าตลาด</option>
+              <option value="ราคาหุ้น">ราคาหุ้น</option>
+              <option value="ปันผล">ปันผล</option>
+              <option value="ราคาตั้งซื้อ">ราคาตั้งซื้อ</option>
+              <option value="ยอดตั้งซื้อ">ยอดตั้งซื้อ</option>
+              <option value="ยอดซื้อ">ยอดซื้อ</option>
+              <option value="ยอดขาย">ยอดขาย</option>
+              <option value="ยอดกำไร">ยอดกำไร</option>
+              <option value="ยอดปันผล">ยอดปันผล</option>
+              <option value="ยอดภาษี">ยอดภาษี</option>
+              <option value="รายได้">รายได้</option>
+              <option value="ซื้อล่าสุด">ซื้อล่าสุด</option>
+              <option value="ขายล่าสุด">ขายล่าสุด</option>
+              <option value="อายุการถือ">อายุการถือ</option>
+            </select>
+            <button 
+              type="button"
+              className="sort-toggle-btn"
+              onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+              title={sortOrder === 'asc' ? 'เรียงจากน้อยไปมาก' : 'เรียงจากมากไปน้อย'}
+            >
+              {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
             </button>
-          )}
+          </div>
         </div>
       </div>
 
@@ -511,10 +655,10 @@ function App() {
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
-            {filteredData.length > 0 ? (
-              filteredData.map((stock, index) => (
+            {sortedData.length > 0 ? (
+              sortedData.map((stock, index) => (
                 <StockCard 
-                  key={stock["ชื่อหุ้น"] + index} 
+                  key={stock["ชื่อหุ้น"] + stock.originalIndex} 
                   stock={stock} 
                   index={index} 
                   onUpdateClick={setSelectedStock} 
@@ -710,7 +854,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
         </span>
         {isMoney && (
           <span className={`detail-sub-value ${colorClass.startsWith('color-') ? colorClass : ''}`}>
-            ฿{(parsedValue * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ≈ ฿{(parsedValue * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         )}
       </div>
