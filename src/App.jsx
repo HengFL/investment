@@ -24,6 +24,14 @@ const getRelativeTime = (dateStr) => {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '';
     const now = new Date();
+    
+    // กรณีทำรายการวันนี้ ให้ขึ้นคำว่า วันนี้
+    if (date.getDate() === now.getDate() &&
+        date.getMonth() === now.getMonth() &&
+        date.getFullYear() === now.getFullYear()) {
+      return 'วันนี้';
+    }
+
     const diffInSeconds = Math.floor((now - date) / 1000);
     
     if (diffInSeconds < 0) return ''; // Future dates
