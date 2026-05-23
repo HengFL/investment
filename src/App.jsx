@@ -431,7 +431,7 @@ function App() {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            Srock US
+            Stock US
           </motion.h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
             <p className="text-muted">หุ้นสหรัฐ</p>
