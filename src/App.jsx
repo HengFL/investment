@@ -267,16 +267,8 @@ function App() {
       
       const query = searchQuery.toLowerCase().trim();
       const ticker = (item["ชื่อหุ้น"] || '').toLowerCase();
-      const company = (item["ชื่อบริษัท"] || '').toLowerCase();
-      const type = (item["ประเภท"] || '').toLowerCase();
-      const market = (item["ตลาด"] || '').toLowerCase();
-      const status = (item["สถานะ"] || '').toLowerCase();
       
-      return ticker.includes(query) || 
-             company.includes(query) || 
-             type.includes(query) || 
-             market.includes(query) || 
-             status.includes(query);
+      return ticker.includes(query);
     });
   }, [data, activeSubTab, searchQuery, activeMainTab]);
 
@@ -424,14 +416,21 @@ function App() {
   }
 
   return (
-    <div className="container">
+    <>
+      <div className="liquid-bg-container">
+        <div className="liquid-blob blob-1"></div>
+        <div className="liquid-blob blob-2"></div>
+        <div className="liquid-blob blob-3"></div>
+        <div className="liquid-blob blob-4"></div>
+      </div>
+      <div className="container">
       <header style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           <motion.h1 
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            Stock US
+            Investment
           </motion.h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
             <p className="text-muted">หุ้นสหรัฐ</p>
@@ -446,7 +445,7 @@ function App() {
           disabled={loading}
         >
           <i className={`fa-solid fa-arrows-rotate ${loading ? 'animate-spin' : ''}`} style={{ fontSize: '18px' }}></i>
-          <span>{loading ? 'กำลังรีเฟรช...' : 'รีเฟรชข้อมูล'}</span>
+          <span>{loading ? 'กำลังรีเฟรช...' : 'รีเฟรชใหม่'}</span>
         </button>
       </header>
 
@@ -560,7 +559,7 @@ function App() {
 
       {/* List Controls: Sub Tabs & Search */}
       <h2 className="section-title animate-fade-in" style={{ marginBottom: '0.5rem' }}>
-        <span>รายการสินทรัพย์</span>
+        <span>รายการพอร์ต</span>
         {activeSubTab !== 'All' && (
           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--secondary)', background: 'rgba(219, 39, 119, 0.08)', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>{activeSubTab}</span>
         )}
@@ -603,7 +602,7 @@ function App() {
             <i className="fa-solid fa-magnifying-glass search-icon" style={{ fontSize: '16px' }}></i>
             <input
               type="text"
-              placeholder="ค้นหาชื่อหุ้น, บริษัท, ตลาด..."
+              placeholder="ค้นหาชื่อหุ้น..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="search-input"
@@ -658,7 +657,7 @@ function App() {
       <div className="stock-list">
         {loading ? (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
-            <p className="text-muted">กำลังโหลดข้อมูลพอร์ตของคุณ...</p>
+            <p className="text-muted">กำลังโหลดข้อมูล...</p>
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
@@ -713,6 +712,7 @@ function App() {
       </AnimatePresence>
 
     </div>
+    </>
   );
 }
 
