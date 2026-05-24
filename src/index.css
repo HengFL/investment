@@ -596,6 +596,16 @@ h1 {
   font-weight: 600;
 }
 
+.market-tag-nyse {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.market-tag-nasdaq {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
 .refresh-button {
   display: flex;
   align-items: center;
@@ -1011,6 +1021,14 @@ h1 {
   transform: translateY(-1px);
 }
 
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker-popper {
+  z-index: 9999 !important;
+}
+
 /* Status Badges */
 .status-badge {
   padding: 0.2rem 0.6rem;
@@ -1028,16 +1046,34 @@ h1 {
   border: 1px solid rgba(5, 150, 105, 0.2);
 }
 
+.status-badge-sold {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.status-badge-wait-sell {
+  background: #fef2f2;
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
 .status-badge-partial {
   background: #fff7ed;
   color: #ea580c;
   border: 1px solid rgba(234, 88, 12, 0.2);
 }
 
-.status-badge-sold {
-  background: #f1f5f9;
-  color: #64748b;
-  border: 1px solid rgba(100, 116, 139, 0.2);
+.status-badge-wait-buy {
+  background: #fdf4ff;
+  color: #d946ef;
+  border: 1px solid rgba(217, 70, 239, 0.2);
+}
+
+.status-badge-list {
+  background: #fefce8;
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.2);
 }
 
 .status-badge-other {

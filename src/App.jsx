@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbwkjycorGKU-NDKVxETVhEC_BiKHhSuuUhMX4uZhDTIYi5KuoPjtIu5FzwE3Ahhc1HZ/exec';
 const UPDATE_API_URL = 'https://script.google.com/macros/s/AKfycbzNnoWQyuqBNn2y1kNq3ecRc8bTx_DeU5GmCCgF7y5ER3TOFZmiTWXnr_unNg6unYzS/exec';
@@ -710,7 +712,10 @@ function App() {
           />
         )}
       </AnimatePresence>
-
+      
+      <footer style={{ textAlign: 'center', padding: '1rem 0 0.5rem', color: 'var(--text-muted, #64748b)', fontSize: '0.875rem', fontWeight: 500 }}>
+        HengFL &copy; 2026
+      </footer>
     </div>
     </>
   );
@@ -921,23 +926,29 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
         </a>
         
         <div className="stock-info">
-          <h3>
-            <span style={{ fontWeight: 700, marginRight: '0.375rem' }}>{ticker}</span>
+          <h3 style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', margin: 0 }}>
+            <span style={{ fontWeight: 700 }}>{ticker}</span>
             <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85rem' }}>{stock["ชื่อบริษัท"]}</span>
-          </h3>
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span className="market-tag">{stock["ตลาด"]}</span>
-            <span className="text-muted" style={{ fontSize: '0.85rem' }}>{stock["ประเภท"]}</span>
             {stock["ลำดับการซื้อ"] && <span className="order-tag">ลำดับที่ {stock["ลำดับการซื้อ"]}</span>}
             {stock["สถานะ"] && (
               <span className={`status-badge ${
                 stock["สถานะ"] === 'ถืออยู่' ? 'status-badge-holding' : 
+                stock["สถานะ"] === 'ขายแล้ว' ? 'status-badge-sold' :
+                stock["สถานะ"] === 'รอขาย' ? 'status-badge-wait-sell' :
                 stock["สถานะ"] === 'ขายบางส่วน' ? 'status-badge-partial' : 
-                stock["สถานะ"].includes('ขาย') ? 'status-badge-sold' : 'status-badge-other'
+                stock["สถานะ"] === 'รอซื้อ' ? 'status-badge-wait-buy' :
+                stock["สถานะ"] === 'ลิสต์' ? 'status-badge-list' : 'status-badge-other'
               }`}>
                 {stock["สถานะ"]}
               </span>
             )}
+          </h3>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className={`market-tag ${
+              stock["ตลาด"] === 'NYSE' ? 'market-tag-nyse' :
+              stock["ตลาด"] === 'NASDAQ' ? 'market-tag-nasdaq' : ''
+            }`}>{stock["ตลาด"]}</span>
+            <span className="text-muted" style={{ fontSize: '0.85rem' }}>{stock["ประเภท"]}</span>
           </div>
         </div>
 
@@ -990,7 +1001,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
             <InteractiveTime 
               dateStr={stock["วันที่ซื้อครั้งแรก"]}
               customDisplay={`${stock["สถานะ"] === 'ขายแล้ว' ? 'ถือรวม' : 'ถือมา'} ${getHoldingAge(stock["วันที่ซื้อครั้งแรก"], stock["วันที่ขายล่าสุด"], stock["สถานะ"])}`}
-              customStyle={{ background: '#e0f2fe', color: '#0369a1' }}
+              customStyle={{ background: 'transparent', color: 'var(--text-main)', paddingLeft: 0 }}
             />
           )}
           <InteractiveTime 
@@ -1044,32 +1055,26 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
       try {
         const date = new Date(stock["วันที่ซื้อล่าสุด"]);
         if (!isNaN(date.getTime())) {
-          const y = date.getFullYear();
-          const m = String(date.getMonth() + 1).padStart(2, '0');
-          const d = String(date.getDate()).padStart(2, '0');
-          return `${y}-${m}-${d}`;
+          return date;
         }
       } catch (e) {
         console.error(e);
       }
     }
-    return '';
+    return null;
   });
   const [lastSellDate, setLastSellDate] = useState(() => {
     if (stock["วันที่ขายล่าสุด"]) {
       try {
         const date = new Date(stock["วันที่ขายล่าสุด"]);
         if (!isNaN(date.getTime())) {
-          const y = date.getFullYear();
-          const m = String(date.getMonth() + 1).padStart(2, '0');
-          const d = String(date.getDate()).padStart(2, '0');
-          return `${y}-${m}-${d}`;
+          return date;
         }
       } catch (e) {
         console.error(e);
       }
     }
-    return '';
+    return null;
   });
   const [buyAmount, setBuyAmount] = useState(() => {
     return stock["ยอดซื้อ ($)"] !== undefined && stock["ยอดซื้อ ($)"] !== null ? stock["ยอดซื้อ ($)"] : '';
@@ -1086,6 +1091,11 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState('idle'); // 'idle' | 'success' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
+
+  const originalBuyAmountRaw = useMemo(() => stock["ยอดซื้อ ($)"] !== undefined && stock["ยอดซื้อ ($)"] !== null ? String(stock["ยอดซื้อ ($)"]) : '', [stock]);
+  const originalSellAmountRaw = useMemo(() => stock["ยอดขาย ($)"] !== undefined && stock["ยอดขาย ($)"] !== null ? String(stock["ยอดขาย ($)"]) : '', [stock]);
+
+
 
   const [activeCalcField, setActiveCalcField] = useState(null); // 'buyAmount' | 'sellAmount' | 'dividendAmount' | 'taxAmount' | null
   const [calcExpression, setCalcExpression] = useState('');
@@ -1184,8 +1194,18 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
     const num = parseFloat(finalValue);
     const resultStr = isNaN(num) ? '' : num.toString();
 
-    if (activeCalcField === 'buyAmount') setBuyAmount(resultStr);
-    else if (activeCalcField === 'sellAmount') setSellAmount(resultStr);
+    if (activeCalcField === 'buyAmount') {
+      setBuyAmount(resultStr);
+      if (resultStr !== '' && resultStr !== originalBuyAmountRaw) {
+        setLastBuyDate(new Date());
+      }
+    }
+    else if (activeCalcField === 'sellAmount') {
+      setSellAmount(resultStr);
+      if (resultStr !== '' && resultStr !== originalSellAmountRaw) {
+        setLastSellDate(new Date());
+      }
+    }
     else if (activeCalcField === 'dividendAmount') setDividendAmount(resultStr);
     else if (activeCalcField === 'taxAmount') setTaxAmount(resultStr);
 
@@ -1311,8 +1331,8 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
     const requestData = {
       sheet_name: stock.port || 'Extra',
       symbol: stock["ชื่อหุ้น"],
-      last_buy_date: lastBuyDate || null,
-      last_sell_date: lastSellDate || null,
+      last_buy_date: lastBuyDate ? `${lastBuyDate.getFullYear()}-${String(lastBuyDate.getMonth() + 1).padStart(2, '0')}-${String(lastBuyDate.getDate()).padStart(2, '0')}` : null,
+      last_sell_date: lastSellDate ? `${lastSellDate.getFullYear()}-${String(lastSellDate.getMonth() + 1).padStart(2, '0')}-${String(lastSellDate.getDate()).padStart(2, '0')}` : null,
       buy_amount: getOrNull(buyAmount),
       sell_amount: getOrNull(sellAmount),
       dividend_amount: getOrNull(dividendAmount),
@@ -1439,27 +1459,31 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
               <div className="form-row-2">
                 <div className="form-group">
                   <label className="form-label">
-                    <i className="fa-solid fa-calendar-days" style={{ fontSize: '14px', marginRight: '4px' }}></i>
                     วันที่ซื้อล่าสุด
                   </label>
-                  <input 
-                    type="date" 
-                    className="form-input" 
-                    value={lastBuyDate} 
-                    onChange={(e) => setLastBuyDate(e.target.value)}
+                  <DatePicker
+                    selected={lastBuyDate}
+                    onChange={(date) => setLastBuyDate(date)}
+                    className="form-input"
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="วว/ดด/ปปปป"
+                    isClearable
+                    todayButton="วันนี้"
                   />
                   <span className="input-helper-text">ค่าเดิม: {originalBuyDate}</span>
                 </div>
                 <div className="form-group">
                   <label className="form-label">
-                    <i className="fa-solid fa-calendar-days" style={{ fontSize: '14px', marginRight: '4px' }}></i>
                     วันที่ขายล่าสุด
                   </label>
-                  <input 
-                    type="date" 
-                    className="form-input" 
-                    value={lastSellDate} 
-                    onChange={(e) => setLastSellDate(e.target.value)}
+                  <DatePicker
+                    selected={lastSellDate}
+                    onChange={(date) => setLastSellDate(date)}
+                    className="form-input"
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="วว/ดด/ปปปป"
+                    isClearable
+                    todayButton="วันนี้"
                   />
                   <span className="input-helper-text">ค่าเดิม: {originalSellDate}</span>
                 </div>
@@ -1476,7 +1500,12 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                       placeholder="0.00"
                       className="form-input" 
                       value={buyAmount} 
-                      onChange={(e) => setBuyAmount(e.target.value)}
+                      onChange={(e) => {
+                        setBuyAmount(e.target.value);
+                        if (e.target.value !== '' && e.target.value !== originalBuyAmountRaw) {
+                          setLastBuyDate(new Date());
+                        }
+                      }}
                     />
                     <button 
                       type="button" 
@@ -1500,7 +1529,12 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                       placeholder="0.00"
                       className="form-input" 
                       value={sellAmount} 
-                      onChange={(e) => setSellAmount(e.target.value)}
+                      onChange={(e) => {
+                        setSellAmount(e.target.value);
+                        if (e.target.value !== '' && e.target.value !== originalSellAmountRaw) {
+                          setLastSellDate(new Date());
+                        }
+                      }}
                     />
                     <button 
                       type="button" 
