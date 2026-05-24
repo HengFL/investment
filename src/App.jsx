@@ -154,7 +154,7 @@ const getSortValue = (stock, option, originalIdx) => {
     case 'ยอดขาย':
       return parseFloat(stock["ยอดขาย ($)"]) || 0;
     case 'ยอดกำไร':
-      return stock["สถานะ"] === "ขายแล้ว"
+      return stock["สถานะ"] === "ขายแล้ว" || stock["สถานะ"] === "รอซื้อ"
         ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
         : 0;
     case 'ยอดปันผล':
@@ -164,7 +164,7 @@ const getSortValue = (stock, option, originalIdx) => {
       return parseFloat(taxVal) || 0;
     }
     case 'รายได้': {
-      const totalProfit = stock["สถานะ"] === "ขายแล้ว"
+      const totalProfit = stock["สถานะ"] === "ขายแล้ว" || stock["สถานะ"] === "รอซื้อ"
         ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
         : 0;
       const taxVal = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
@@ -363,9 +363,9 @@ function App() {
       return acc;
     }, 0);
 
-    // Sum of Total Profit/Loss (only calculated for status 'ขายแล้ว')
+    // Sum of Total Profit/Loss (only calculated for status 'ขายแล้ว' and 'รอซื้อ')
     const totalProfitSum = mainTabData.reduce((acc, item) => {
-      if (item["สถานะ"] === "ขายแล้ว") {
+      if (item["สถานะ"] === "ขายแล้ว" || item["สถานะ"] === "รอซื้อ") {
         const profit = (parseFloat(item["ยอดขาย ($)"]) || 0) - (parseFloat(item["ยอดซื้อ ($)"]) || 0);
         return acc + profit;
       }
@@ -878,7 +878,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
   const remainingTarget = (stock.port === 'Trade' || targetPrice <= 0)
     ? 0
     : targetAmount - (parseFloat(stock["ยอดซื้อ ($)"]) || 0) + (parseFloat(stock["ยอดขาย ($)"]) || 0);
-  const totalProfit = stock["สถานะ"] === "ขายแล้ว"
+  const totalProfit = stock["สถานะ"] === "ขายแล้ว" || stock["สถานะ"] === "รอซื้อ"
     ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
     : 0;
   const taxVal = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
