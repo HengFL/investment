@@ -1088,6 +1088,10 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
   const [taxAmount, setTaxAmount] = useState(() => {
     return stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || '';
   });
+  const [stockStatus, setStockStatus] = useState(() => stock["สถานะ"] || '');
+  const [dividendRate, setDividendRate] = useState(() => {
+    return stock["อัตราปันผล (%)"] !== undefined && stock["อัตราปันผล (%)"] !== null ? stock["อัตราปันผล (%)"] : '';
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState('idle'); // 'idle' | 'success' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
@@ -1208,6 +1212,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
     }
     else if (activeCalcField === 'dividendAmount') setDividendAmount(resultStr);
     else if (activeCalcField === 'taxAmount') setTaxAmount(resultStr);
+    else if (activeCalcField === 'dividendRate') setDividendRate(resultStr);
 
     setActiveCalcField(null);
   };
@@ -1232,7 +1237,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
     return (
       <div 
         ref={popoverRef}
-        className="calculator-popover popover-right popover-up"
+        className={`calculator-popover popover-right ${fieldName === 'dividendRate' ? 'popover-down' : 'popover-up'}`}
       >
         <div className="calc-header">
           <div className="calc-title">
@@ -1331,12 +1336,14 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
     const requestData = {
       sheet_name: stock.port || 'Extra',
       symbol: stock["ชื่อหุ้น"],
+      status: stockStatus || null,
       last_buy_date: lastBuyDate ? `${lastBuyDate.getFullYear()}-${String(lastBuyDate.getMonth() + 1).padStart(2, '0')}-${String(lastBuyDate.getDate()).padStart(2, '0')}` : null,
       last_sell_date: lastSellDate ? `${lastSellDate.getFullYear()}-${String(lastSellDate.getMonth() + 1).padStart(2, '0')}-${String(lastSellDate.getDate()).padStart(2, '0')}` : null,
       buy_amount: getOrNull(buyAmount),
       sell_amount: getOrNull(sellAmount),
       dividend_amount: getOrNull(dividendAmount),
-      tax_amount: getOrNull(taxAmount)
+      tax_amount: getOrNull(taxAmount),
+      dividend_rate: getOrNull(dividendRate)
     };
 
     try {
@@ -1409,20 +1416,29 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
           <form onSubmit={handleSubmit}>
             <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                <div className="modal-stock-icon">
-                  <img 
-                    src={`https://assets.parqet.com/logos/symbol/${stock["ชื่อหุ้น"]}?format=png`} 
-                    alt={stock["ชื่อหุ้น"]} 
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'block';
-                    }}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '2px' }}
-                  />
-                  <span style={{ display: 'none', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)', padding: '8px' }}>
-                    {stock["ชื่อหุ้น"].substring(0, 2)}
-                  </span>
-                </div>
+                <a 
+                  href={stock["กราฟ"]} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="logo-link"
+                  title="คลิกเพื่อดูกราฟ"
+                  style={{ display: 'block', textDecoration: 'none' }}
+                >
+                  <div className="modal-stock-icon">
+                    <img 
+                      src={`https://assets.parqet.com/logos/symbol/${stock["ชื่อหุ้น"]}?format=png`} 
+                      alt={stock["ชื่อหุ้น"]} 
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '2px' }}
+                    />
+                    <span style={{ display: 'none', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)', padding: '8px' }}>
+                      {stock["ชื่อหุ้น"].substring(0, 2)}
+                    </span>
+                  </div>
+                </a>
                 <div>
                   <h3 className="modal-title">อัปเดต {stock["ชื่อหุ้น"]}</h3>
                   <p className="modal-subtitle">{stock["ชื่อบริษัท"]} • พอร์ต: <span className="highlight-tag">{stock.port}</span></p>
@@ -1458,6 +1474,50 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
 
               <div className="form-row-2">
                 <div className="form-group">
+                  <label className="form-label">สถานะ</label>
+                  <select 
+                    className="form-input" 
+                    value={stockStatus} 
+                    onChange={(e) => setStockStatus(e.target.value)}
+                  >
+                    <option value="">-- เลือกสถานะ --</option>
+                    <option value="ถืออยู่">ถืออยู่</option>
+                    <option value="ขายแล้ว">ขายแล้ว</option>
+                    <option value="รอขาย">รอขาย</option>
+                    <option value="ขายบางส่วน">ขายบางส่วน</option>
+                    <option value="รอซื้อ">รอซื้อ</option>
+                    <option value="ลิสต์">ลิสต์</option>
+                  </select>
+                  <span className="input-helper-text">ค่าเดิม: {stock["สถานะ"] || 'ไม่มี'}</span>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">อัตราปันผล (%)</label>
+                  <div className="input-with-button">
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      min="0"
+                      placeholder="0.00"
+                      className="form-input" 
+                      value={dividendRate} 
+                      onChange={(e) => setDividendRate(e.target.value)}
+                    />
+                    <button 
+                      type="button" 
+                      className="input-action-btn" 
+                      onClick={() => openCalculator('dividendRate', dividendRate)}
+                      title="เปิดเครื่องคิดเลข"
+                    >
+                      <i className="fa-solid fa-calculator" style={{ fontSize: '14px' }}></i>
+                    </button>
+                    {activeCalcField === 'dividendRate' && renderCalculatorPopover('dividendRate')}
+                  </div>
+                  <span className="input-helper-text">ค่าเดิม: {stock["อัตราปันผล (%)"] || '0.00'}%</span>
+                </div>
+              </div>
+
+              <div className="form-row-2">
+                <div className="form-group">
                   <label className="form-label">
                     วันที่ซื้อล่าสุด
                   </label>
@@ -1469,6 +1529,10 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                     placeholderText="วว/ดด/ปปปป"
                     isClearable
                     todayButton="วันนี้"
+                    popperPlacement="top"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
                   />
                   <span className="input-helper-text">ค่าเดิม: {originalBuyDate}</span>
                 </div>
@@ -1484,6 +1548,10 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                     placeholderText="วว/ดด/ปปปป"
                     isClearable
                     todayButton="วันนี้"
+                    popperPlacement="top"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
                   />
                   <span className="input-helper-text">ค่าเดิม: {originalSellDate}</span>
                 </div>
