@@ -789,11 +789,11 @@ function InteractiveTime({ label, dateStr, colorClass, customDisplay, customStyl
             setShowPopover(!showPopover);
           }}
           style={{ 
-            fontSize: '0.8rem', 
-            fontWeight: 600, 
+            fontSize: '0.7rem', 
+            fontWeight: 700, 
             cursor: 'pointer',
-            padding: '2px 6px',
-            borderRadius: '4px',
+            padding: '0.2rem 0.6rem',
+            borderRadius: '6px',
             transition: 'background 0.2s',
             userSelect: 'none',
             display: 'inline-block',
@@ -906,7 +906,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
     >
       <div className="stock-main-info">
         <a 
-          href={stock["กราฟ"]} 
+          href={stock["TradingView"]} 
           target="_blank" 
           rel="noopener noreferrer" 
           className="logo-link"
@@ -930,18 +930,6 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
             <span style={{ fontWeight: 700 }}>{ticker}</span>
             <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85rem' }}>{stock["ชื่อบริษัท"]}</span>
             {stock["ลำดับการซื้อ"] && <span className="order-tag">ลำดับที่ {stock["ลำดับการซื้อ"]}</span>}
-            {stock["สถานะ"] && (
-              <span className={`status-badge ${
-                stock["สถานะ"] === 'ถืออยู่' ? 'status-badge-holding' : 
-                stock["สถานะ"] === 'ขายแล้ว' ? 'status-badge-sold' :
-                stock["สถานะ"] === 'รอขาย' ? 'status-badge-wait-sell' :
-                stock["สถานะ"] === 'ขายบางส่วน' ? 'status-badge-partial' : 
-                stock["สถานะ"] === 'รอซื้อ' ? 'status-badge-wait-buy' :
-                stock["สถานะ"] === 'ลิสต์' ? 'status-badge-list' : 'status-badge-other'
-              }`}>
-                {stock["สถานะ"]}
-              </span>
-            )}
           </h3>
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <span className={`market-tag ${
@@ -949,6 +937,20 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
               stock["ตลาด"] === 'NASDAQ' ? 'market-tag-nasdaq' : ''
             }`}>{stock["ตลาด"]}</span>
             <span className="text-muted" style={{ fontSize: '0.85rem' }}>{stock["ประเภท"]}</span>
+            {stock["หลักชะรีอะฮ์"] && (
+              <a 
+                href={stock["Musaffa"] || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className={`shariah-badge shariah-${stock["หลักชะรีอะฮ์"].trim().toLowerCase().replace(/\s+/g, '-')}`}
+                title="ตรวจสอบสถานะบน Musaffa"
+                onClick={(e) => {
+                  if (!stock["Musaffa"]) e.preventDefault();
+                }}
+              >
+                <i className="fa-solid fa-leaf" style={{ fontSize: '10px' }}></i> {stock["หลักชะรีอะฮ์"]}
+              </a>
+            )}
           </div>
         </div>
 
@@ -1003,6 +1005,21 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
               customDisplay={`${stock["สถานะ"] === 'ขายแล้ว' ? 'ถือรวม' : 'ถือมา'} ${getHoldingAge(stock["วันที่ซื้อครั้งแรก"], stock["วันที่ขายล่าสุด"], stock["สถานะ"])}`}
               customStyle={{ background: 'transparent', color: 'var(--text-main)', paddingLeft: 0 }}
             />
+          )}
+          {stock["สถานะ"] && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              <span className="detail-label" style={{ fontSize: '0.7rem' }}>สถานะ</span>
+              <span className={`status-badge ${
+                stock["สถานะ"] === 'ถืออยู่' ? 'status-badge-holding' : 
+                stock["สถานะ"] === 'ขายแล้ว' ? 'status-badge-sold' :
+                stock["สถานะ"] === 'รอขาย' ? 'status-badge-wait-sell' :
+                stock["สถานะ"] === 'ขายบางส่วน' ? 'status-badge-partial' : 
+                stock["สถานะ"] === 'รอซื้อ' ? 'status-badge-wait-buy' :
+                stock["สถานะ"] === 'ลิสต์' ? 'status-badge-list' : 'status-badge-other'
+              }`}>
+                {stock["สถานะ"]}
+              </span>
+            </div>
           )}
           <InteractiveTime 
             label="ซื้อล่าสุด" 
@@ -1417,7 +1434,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
             <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
                 <a 
-                  href={stock["กราฟ"]} 
+                  href={stock["TradingView"]} 
                   target="_blank" 
                   rel="noopener noreferrer" 
                   className="logo-link"
