@@ -1010,7 +1010,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
               <span className="detail-label" style={{ fontSize: '0.7rem' }}>สถานะ</span>
               <span className={`status-badge ${
-                stock["สถานะ"] === 'ถืออยู่' ? 'status-badge-holding' : 
+                stock["สถานะ"] === 'ซื้อแล้ว' ? 'status-badge-holding' : 
                 stock["สถานะ"] === 'ขายแล้ว' ? 'status-badge-sold' :
                 stock["สถานะ"] === 'รอขาย' ? 'status-badge-wait-sell' :
                 stock["สถานะ"] === 'ขายบางส่วน' ? 'status-badge-partial' : 
@@ -1498,7 +1498,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                     onChange={(e) => setStockStatus(e.target.value)}
                   >
                     <option value="">-- เลือกสถานะ --</option>
-                    <option value="ถืออยู่">ถืออยู่</option>
+                    <option value="ซื้อแล้ว">ซื้อแล้ว</option>
                     <option value="ขายแล้ว">ขายแล้ว</option>
                     <option value="รอขาย">รอขาย</option>
                     <option value="ขายบางส่วน">ขายบางส่วน</option>
