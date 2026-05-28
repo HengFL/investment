@@ -153,7 +153,7 @@ const getSortValue = (stock, option, originalIdx) => {
       return parseFloat(stock["ยอดซื้อ ($)"]) || 0;
     case 'ยอดขาย':
       return parseFloat(stock["ยอดขาย ($)"]) || 0;
-    case 'ยอดกำไร':
+    case 'ยอดรายได้':
       return stock["สถานะ"] === "ขายแล้ว" || stock["สถานะ"] === "รอซื้อ"
         ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
         : 0;
@@ -163,7 +163,7 @@ const getSortValue = (stock, option, originalIdx) => {
       const taxVal = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
       return parseFloat(taxVal) || 0;
     }
-    case 'รายได้': {
+    case 'ยอดกำไร': {
       const totalProfit = stock["สถานะ"] === "ขายแล้ว" || stock["สถานะ"] === "รอซื้อ"
         ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
         : 0;
@@ -524,7 +524,7 @@ function App() {
           delay={0.6}
         />
         <SummaryCard 
-          label="ยอดกำไรทั้งหมด" 
+          label="ยอดรายได้ทั้งหมด" 
           value={formatCurrency(summary.totalProfitSum)} 
           subValue={formatTHB(summary.totalProfitSum * exchangeRate)}
           icon={<i className="fa-solid fa-arrow-trend-up" style={{ fontSize: '20px', color: summary.totalProfitSum >= 0 ? 'var(--success)' : 'var(--error)' }}></i>}
@@ -550,7 +550,7 @@ function App() {
           colorMode="binary"
         />
         <SummaryCard 
-          label="รายได้ทั้งหมด" 
+          label="ยอดกำไรทั้งหมด" 
           value={formatCurrency(summary.totalIncomeSum)} 
           subValue={formatTHB(summary.totalIncomeSum * exchangeRate)}
           icon={<i className="fa-solid fa-wallet" style={{ fontSize: '20px', color: summary.totalIncomeSum >= 0 ? 'var(--success)' : 'var(--error)' }}></i>}
@@ -635,10 +635,10 @@ function App() {
               <option value="ยอดตั้งซื้อ">ยอดตั้งซื้อ</option>
               <option value="ยอดซื้อ">ยอดซื้อ</option>
               <option value="ยอดขาย">ยอดขาย</option>
-              <option value="ยอดกำไร">ยอดกำไร</option>
+              <option value="ยอดรายได้">ยอดรายได้</option>
               <option value="ยอดปันผล">ยอดปันผล</option>
               <option value="ยอดภาษี">ยอดภาษี</option>
-              <option value="รายได้">รายได้</option>
+              <option value="ยอดกำไร">ยอดกำไร</option>
               <option value="ซื้อล่าสุด">ซื้อล่าสุด</option>
               <option value="ขายล่าสุด">ขายล่าสุด</option>
               <option value="อายุการถือ">อายุการถือ</option>
@@ -991,10 +991,10 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
         <DetailItem label="ยอดตั้งซื้อ" value={remainingTarget} isMoney={true} colorClass={getStatusColor(remainingTarget)} />
         <DetailItem label="ยอดซื้อ" value={stock["ยอดซื้อ ($)"]} isMoney={true} />
         <DetailItem label="ยอดขาย" value={stock["ยอดขาย ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดขาย ($)"])} />
-        <DetailItem label="ยอดกำไร" value={totalProfit} isMoney={true} colorClass={getStatusColor(totalProfit)} />
+        <DetailItem label="ยอดรายได้" value={totalProfit} isMoney={true} colorClass={getStatusColor(totalProfit)} />
         <DetailItem label="ยอดปันผล" value={stock["ยอดปันผล ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดปันผล ($)"])} />
         <DetailItem label="ยอดภาษี" value={taxVal} isMoney={true} colorClass={getBinaryColorClass(taxVal)} />
-        <DetailItem label="รายได้" value={netIncome} isMoney={true} colorClass={getStatusColor(netIncome)} />
+        <DetailItem label="ยอดกำไร" value={netIncome} isMoney={true} colorClass={getStatusColor(netIncome)} />
       </div>
 
       <div className="stock-card-footer" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
