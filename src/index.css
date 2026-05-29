@@ -744,7 +744,7 @@ h1 {
 
 .modal-content {
   width: 100%;
-  max-width: 480px;
+  max-width: 900px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.5) 100%);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -759,6 +759,25 @@ h1 {
   position: relative;
   display: flex;
   flex-direction: column;
+}
+
+.form-grid-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem 0.75rem;
+}
+
+.form-group-span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 968px) {
+  .modal-content {
+    max-width: 480px;
+  }
+  .form-grid-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .modal-header {

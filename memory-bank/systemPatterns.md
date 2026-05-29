@@ -45,7 +45,7 @@ invest/
 - `loading` / `error`: การจัดการสถานะการโหลดข้อมูลและการแสดงข้อผิดพลาด
 - `selectedStock`: หุ้นที่ถูกเลือกเพื่อใช้ในการอัปเดตผ่าน Modal
 - `exchangeRate`: อัตราแลกเปลี่ยน USD/THB ปัจจุบัน (ดึงข้อมูลตอนโหลดครั้งแรก)
-- `activeMainTab` / `activeSubTab`: แท็บพอร์ตหลัก (Hold, Trade, Sale) และพอร์ตย่อย
+- `activeMainTab` / `activeSubTab`: แท็บพอร์ตหลัก (Hold, Trade, Sale, List) และพอร์ตย่อย
 - `searchQuery`: ข้อความค้นหาหุ้นแบบเรียลไทม์
 - `sortBy` / `sortOrder`: ตัวเลือกการจัดเรียง (เช่น เรียงตามยอดซื้อ ยอดขาย ปันผล อายุการถือครอง)
 

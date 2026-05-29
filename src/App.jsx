@@ -6,11 +6,47 @@ import 'react-datepicker/dist/react-datepicker.css';
 const API_URL = 'https://script.google.com/macros/s/AKfycbwkjycorGKU-NDKVxETVhEC_BiKHhSuuUhMX4uZhDTIYi5KuoPjtIu5FzwE3Ahhc1HZ/exec';
 const UPDATE_API_URL = 'https://script.google.com/macros/s/AKfycbzNnoWQyuqBNn2y1kNq3ecRc8bTx_DeU5GmCCgF7y5ER3TOFZmiTWXnr_unNg6unYzS/exec';
 
+const parseDate = (dateStr) => {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
+  
+  const cleanStr = String(dateStr).trim();
+  if (!cleanStr) return null;
+  
+  // Regular expression to match DD/MM/YYYY (with / or - separator, optionally followed by time)
+  const dmyRegex = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/;
+  const match = cleanStr.match(dmyRegex);
+  
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1; // Month is 0-indexed in JS
+    let year = parseInt(match[3], 10);
+    if (year < 100) {
+      year += year < 50 ? 2000 : 1900;
+    }
+    const hour = match[4] ? parseInt(match[4], 10) : 0;
+    const minute = match[5] ? parseInt(match[5], 10) : 0;
+    const second = match[6] ? parseInt(match[6], 10) : 0;
+    
+    const parsedDate = new Date(year, month, day, hour, minute, second);
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate;
+    }
+  }
+  
+  const standardDate = new Date(cleanStr);
+  if (!isNaN(standardDate.getTime())) {
+    return standardDate;
+  }
+  
+  return null;
+};
+
 const formatDate = (dateStr) => {
   if (!dateStr) return '-';
   try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
+    const date = parseDate(dateStr);
+    if (!date) return dateStr;
     const d = String(date.getDate()).padStart(2, '0');
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const y = date.getFullYear();
@@ -23,8 +59,8 @@ const formatDate = (dateStr) => {
 const getRelativeTime = (dateStr) => {
   if (!dateStr) return '';
   try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return '';
+    const date = parseDate(dateStr);
+    if (!date) return '';
     const now = new Date();
     
     // กรณีทำรายการวันนี้ ให้ขึ้นคำว่า วันนี้
@@ -52,15 +88,14 @@ const getRelativeTime = (dateStr) => {
 const getTimeColor = (dateStr) => {
   if (!dateStr) return '';
   try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return '';
+    const date = parseDate(dateStr);
+    if (!date) return '';
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
     const diffInMonths = diffInSeconds / (30 * 24 * 3600);
     
     if (diffInMonths <= 1) return 'time-fresh';
-    if (diffInMonths <= 2) return 'time-warning-1';
-    if (diffInMonths <= 3) return 'time-warning-2';
+    if (diffInMonths <= 12) return 'time-warning-2';
     return 'time-danger';
   } catch (e) {
     return '';
@@ -70,13 +105,13 @@ const getTimeColor = (dateStr) => {
 const getHoldingAge = (firstBuyDateStr, lastSellDateStr, status) => {
   if (!firstBuyDateStr) return '';
   try {
-    const startDate = new Date(firstBuyDateStr);
-    if (isNaN(startDate.getTime())) return '';
+    const startDate = parseDate(firstBuyDateStr);
+    if (!startDate) return '';
     
     let endDate = new Date();
     if (status === 'ขายแล้ว' && lastSellDateStr) {
-      const sellDate = new Date(lastSellDateStr);
-      if (!isNaN(sellDate.getTime())) {
+      const sellDate = parseDate(lastSellDateStr);
+      if (sellDate) {
         endDate = sellDate;
       }
     }
@@ -116,9 +151,9 @@ const getHoldingAge = (firstBuyDateStr, lastSellDateStr, status) => {
 const calculateTargetAmount = (startDateStr, pricePerMonth) => {
   if (!startDateStr || !pricePerMonth) return 0;
   try {
-    const start = new Date(startDateStr);
+    const start = parseDate(startDateStr);
     const now = new Date();
-    if (isNaN(start.getTime())) return 0;
+    if (!start) return 0;
     
     const years = now.getFullYear() - start.getFullYear();
     const months = (years * 12) + (now.getMonth() - start.getMonth());
@@ -153,7 +188,7 @@ const getSortValue = (stock, option, originalIdx) => {
       return parseFloat(stock["ยอดซื้อ ($)"]) || 0;
     case 'ยอดขาย':
       return parseFloat(stock["ยอดขาย ($)"]) || 0;
-    case 'ยอดรายได้':
+    case 'ยอดกำไร':
       return stock["สถานะ"] === "ขายแล้ว" || stock["สถานะ"] === "รอซื้อ"
         ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
         : 0;
@@ -163,7 +198,7 @@ const getSortValue = (stock, option, originalIdx) => {
       const taxVal = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
       return parseFloat(taxVal) || 0;
     }
-    case 'ยอดกำไร': {
+    case 'ยอดกำไรสุทธิ': {
       const totalProfit = stock["สถานะ"] === "ขายแล้ว" || stock["สถานะ"] === "รอซื้อ"
         ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
         : 0;
@@ -208,7 +243,8 @@ function App() {
   const PORT_CATEGORIES = {
     'Hold': ['Extra', 'Main', 'Second', 'Addon', 'Begin', 'DR'],
     'Trade': ['Trade'],
-    'Sale': ['Sale']
+    'Sale': ['Sale'],
+    'List': ['List']
   };
 
   const [activeMainTab, setActiveMainTab] = useState('Hold');
@@ -299,8 +335,10 @@ function App() {
         if (!hasA) return 1; // b comes first (missing dates placed at the end)
         if (!hasB) return -1; // a comes first
 
-        const valA = new Date(dateKeyA).getTime();
-        const valB = new Date(dateKeyB).getTime();
+        const dateA = parseDate(dateKeyA);
+        const dateB = parseDate(dateKeyB);
+        const valA = dateA ? dateA.getTime() : 0;
+        const valB = dateB ? dateB.getTime() : 0;
 
         let comparison = 0;
         if (sortBy === 'อายุการถือ') {
@@ -524,7 +562,7 @@ function App() {
           delay={0.6}
         />
         <SummaryCard 
-          label="ยอดรายได้ทั้งหมด" 
+          label="ยอดกำไรทั้งหมด" 
           value={formatCurrency(summary.totalProfitSum)} 
           subValue={formatTHB(summary.totalProfitSum * exchangeRate)}
           icon={<i className="fa-solid fa-arrow-trend-up" style={{ fontSize: '20px', color: summary.totalProfitSum >= 0 ? 'var(--success)' : 'var(--error)' }}></i>}
@@ -550,7 +588,7 @@ function App() {
           colorMode="binary"
         />
         <SummaryCard 
-          label="ยอดกำไรทั้งหมด" 
+          label="ยอดกำไรสุทธิทั้งหมด" 
           value={formatCurrency(summary.totalIncomeSum)} 
           subValue={formatTHB(summary.totalIncomeSum * exchangeRate)}
           icon={<i className="fa-solid fa-wallet" style={{ fontSize: '20px', color: summary.totalIncomeSum >= 0 ? 'var(--success)' : 'var(--error)' }}></i>}
@@ -635,10 +673,10 @@ function App() {
               <option value="ยอดตั้งซื้อ">ยอดตั้งซื้อ</option>
               <option value="ยอดซื้อ">ยอดซื้อ</option>
               <option value="ยอดขาย">ยอดขาย</option>
-              <option value="ยอดรายได้">ยอดรายได้</option>
+              <option value="ยอดกำไร">ยอดกำไร</option>
               <option value="ยอดปันผล">ยอดปันผล</option>
               <option value="ยอดภาษี">ยอดภาษี</option>
-              <option value="ยอดกำไร">ยอดกำไร</option>
+              <option value="ยอดกำไรสุทธิ">ยอดกำไรสุทธิ</option>
               <option value="ซื้อล่าสุด">ซื้อล่าสุด</option>
               <option value="ขายล่าสุด">ขายล่าสุด</option>
               <option value="อายุการถือ">อายุการถือ</option>
@@ -991,10 +1029,10 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
         <DetailItem label="ยอดตั้งซื้อ" value={remainingTarget} isMoney={true} colorClass={getStatusColor(remainingTarget)} />
         <DetailItem label="ยอดซื้อ" value={stock["ยอดซื้อ ($)"]} isMoney={true} />
         <DetailItem label="ยอดขาย" value={stock["ยอดขาย ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดขาย ($)"])} />
-        <DetailItem label="ยอดรายได้" value={totalProfit} isMoney={true} colorClass={getStatusColor(totalProfit)} />
+        <DetailItem label="ยอดกำไร" value={totalProfit} isMoney={true} colorClass={getStatusColor(totalProfit)} />
         <DetailItem label="ยอดปันผล" value={stock["ยอดปันผล ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดปันผล ($)"])} />
         <DetailItem label="ยอดภาษี" value={taxVal} isMoney={true} colorClass={getBinaryColorClass(taxVal)} />
-        <DetailItem label="ยอดกำไร" value={netIncome} isMoney={true} colorClass={getStatusColor(netIncome)} />
+        <DetailItem label="ยอดกำไรสุทธิ" value={netIncome} isMoney={true} colorClass={getStatusColor(netIncome)} />
       </div>
 
       <div className="stock-card-footer" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
@@ -1066,32 +1104,15 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
   
   const origTax = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
   const originalTaxAmount = formatOriginalMoney(origTax);
+  
+  const origClear = stock["ยอดกำจัด ($)"] || stock["clear_amount"] || 0;
+  const originalClearAmount = formatOriginalMoney(origClear);
 
   const [lastBuyDate, setLastBuyDate] = useState(() => {
-    if (stock["วันที่ซื้อล่าสุด"]) {
-      try {
-        const date = new Date(stock["วันที่ซื้อล่าสุด"]);
-        if (!isNaN(date.getTime())) {
-          return date;
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return null;
+    return stock["วันที่ซื้อล่าสุด"] ? parseDate(stock["วันที่ซื้อล่าสุด"]) : null;
   });
   const [lastSellDate, setLastSellDate] = useState(() => {
-    if (stock["วันที่ขายล่าสุด"]) {
-      try {
-        const date = new Date(stock["วันที่ขายล่าสุด"]);
-        if (!isNaN(date.getTime())) {
-          return date;
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return null;
+    return stock["วันที่ขายล่าสุด"] ? parseDate(stock["วันที่ขายล่าสุด"]) : null;
   });
   const [buyAmount, setBuyAmount] = useState(() => {
     return stock["ยอดซื้อ ($)"] !== undefined && stock["ยอดซื้อ ($)"] !== null ? stock["ยอดซื้อ ($)"] : '';
@@ -1105,9 +1126,19 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
   const [taxAmount, setTaxAmount] = useState(() => {
     return stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || '';
   });
+  const [clearAmount, setClearAmount] = useState(() => {
+    return stock["ยอดกำจัด ($)"] !== undefined && stock["ยอดกำจัด ($)"] !== null 
+      ? stock["ยอดกำจัด ($)"] 
+      : (stock["clear_amount"] !== undefined && stock["clear_amount"] !== null ? stock["clear_amount"] : '');
+  });
   const [stockStatus, setStockStatus] = useState(() => stock["สถานะ"] || '');
   const [dividendRate, setDividendRate] = useState(() => {
     return stock["อัตราปันผล (%)"] !== undefined && stock["อัตราปันผล (%)"] !== null ? stock["อัตราปันผล (%)"] : '';
+  });
+  const [clearRate, setClearRate] = useState(() => {
+    return stock["อัตรากำจัด (%)"] !== undefined && stock["อัตรากำจัด (%)"] !== null 
+      ? stock["อัตรากำจัด (%)"] 
+      : (stock["clear_rate"] !== undefined && stock["clear_rate"] !== null ? stock["clear_rate"] : '');
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState('idle'); // 'idle' | 'success' | 'error'
@@ -1229,7 +1260,9 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
     }
     else if (activeCalcField === 'dividendAmount') setDividendAmount(resultStr);
     else if (activeCalcField === 'taxAmount') setTaxAmount(resultStr);
+    else if (activeCalcField === 'clearAmount') setClearAmount(resultStr);
     else if (activeCalcField === 'dividendRate') setDividendRate(resultStr);
+    else if (activeCalcField === 'clearRate') setClearRate(resultStr);
 
     setActiveCalcField(null);
   };
@@ -1254,7 +1287,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
     return (
       <div 
         ref={popoverRef}
-        className={`calculator-popover popover-right ${fieldName === 'dividendRate' ? 'popover-down' : 'popover-up'}`}
+        className={`calculator-popover popover-right ${['dividendRate', 'clearRate'].includes(fieldName) ? 'popover-down' : 'popover-up'}`}
       >
         <div className="calc-header">
           <div className="calc-title">
@@ -1360,7 +1393,9 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
       sell_amount: getOrNull(sellAmount),
       dividend_amount: getOrNull(dividendAmount),
       tax_amount: getOrNull(taxAmount),
-      dividend_rate: getOrNull(dividendRate)
+      clear_amount: getOrNull(clearAmount),
+      dividend_rate: getOrNull(dividendRate),
+      clear_rate: getOrNull(clearRate)
     };
 
     try {
@@ -1489,7 +1524,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                 </div>
               </div>
 
-              <div className="form-row-2">
+              <div className="form-grid-container">
                 <div className="form-group">
                   <label className="form-label">สถานะ</label>
                   <select 
@@ -1507,6 +1542,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                   </select>
                   <span className="input-helper-text">ค่าเดิม: {stock["สถานะ"] || 'ไม่มี'}</span>
                 </div>
+
                 <div className="form-group">
                   <label className="form-label">อัตราปันผล (%)</label>
                   <div className="input-with-button">
@@ -1531,9 +1567,32 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                   </div>
                   <span className="input-helper-text">ค่าเดิม: {stock["อัตราปันผล (%)"] || '0.00'}%</span>
                 </div>
-              </div>
 
-              <div className="form-row-2">
+                <div className="form-group">
+                  <label className="form-label">อัตรากำจัด (%)</label>
+                  <div className="input-with-button">
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      min="0"
+                      placeholder="0.00"
+                      className="form-input" 
+                      value={clearRate} 
+                      onChange={(e) => setClearRate(e.target.value)}
+                    />
+                    <button 
+                      type="button" 
+                      className="input-action-btn" 
+                      onClick={() => openCalculator('clearRate', clearRate)}
+                      title="เปิดเครื่องคิดเลข"
+                    >
+                      <i className="fa-solid fa-calculator" style={{ fontSize: '14px' }}></i>
+                    </button>
+                    {activeCalcField === 'clearRate' && renderCalculatorPopover('clearRate')}
+                  </div>
+                  <span className="input-helper-text">ค่าเดิม: {stock["อัตรากำจัด (%)"] || stock["clear_rate"] || '0.00'}%</span>
+                </div>
+
                 <div className="form-group">
                   <label className="form-label">
                     วันที่ซื้อล่าสุด
@@ -1553,6 +1612,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                   />
                   <span className="input-helper-text">ค่าเดิม: {originalBuyDate}</span>
                 </div>
+
                 <div className="form-group">
                   <label className="form-label">
                     วันที่ขายล่าสุด
@@ -1572,9 +1632,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                   />
                   <span className="input-helper-text">ค่าเดิม: {originalSellDate}</span>
                 </div>
-              </div>
 
-              <div className="form-row-2">
                 <div className="form-group">
                   <label className="form-label">ยอดซื้อ ($)</label>
                   <div className="input-with-button">
@@ -1604,6 +1662,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                   </div>
                   <span className="input-helper-text">ค่าเดิม: {originalBuyAmount}</span>
                 </div>
+
                 <div className="form-group">
                   <label className="form-label">ยอดขาย ($)</label>
                   <div className="input-with-button">
@@ -1633,9 +1692,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                   </div>
                   <span className="input-helper-text">ค่าเดิม: {originalSellAmount}</span>
                 </div>
-              </div>
 
-              <div className="form-row-2">
                 <div className="form-group">
                   <label className="form-label">ยอดปันผล ($)</label>
                   <div className="input-with-button">
@@ -1660,6 +1717,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                   </div>
                   <span className="input-helper-text">ค่าเดิม: {originalDividendAmount}</span>
                 </div>
+
                 <div className="form-group">
                   <label className="form-label">ภาษี ($)</label>
                   <div className="input-with-button">
@@ -1683,6 +1741,31 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                     {activeCalcField === 'taxAmount' && renderCalculatorPopover('taxAmount')}
                   </div>
                   <span className="input-helper-text">ค่าเดิม: {originalTaxAmount}</span>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">ยอดกำจัด ($)</label>
+                  <div className="input-with-button">
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      min="0"
+                      placeholder="0.00"
+                      className="form-input" 
+                      value={clearAmount} 
+                      onChange={(e) => setClearAmount(e.target.value)}
+                    />
+                    <button 
+                      type="button" 
+                      className="input-action-btn" 
+                      onClick={() => openCalculator('clearAmount', clearAmount)}
+                      title="เปิดเครื่องคิดเลข"
+                    >
+                      <i className="fa-solid fa-calculator" style={{ fontSize: '14px' }}></i>
+                    </button>
+                    {activeCalcField === 'clearAmount' && renderCalculatorPopover('clearAmount')}
+                  </div>
+                  <span className="input-helper-text">ค่าเดิม: {originalClearAmount}</span>
                 </div>
               </div>
             </div>
