@@ -520,7 +520,7 @@ h1 {
 
 .status-grey .detail-value { color: #94a3b8; }
 .status-red .detail-value { color: #dc2626; }
-.status-green .detail-value { color: #16a34a; }
+.status-green .detail-value { color: #047857; }
 
 .detail-sub-value {
   font-size: 0.725rem;
@@ -533,7 +533,7 @@ h1 {
 
 .status-grey .detail-sub-value { color: #94a3b8; }
 .status-red .detail-sub-value { color: #dc2626; }
-.status-green .detail-sub-value { color: #16a34a; }
+.status-green .detail-sub-value { color: #047857; }
 
 .order-tag {
   background: #f1f5f9;
@@ -1127,21 +1127,21 @@ h1 {
 }
 
 .status-badge-partial {
+  background: #f0f9ff;
+  color: #0284c7;
+  border: 1px solid rgba(2, 132, 199, 0.2);
+}
+
+.status-badge-wait-buy {
   background: #fff7ed;
   color: #ea580c;
   border: 1px solid rgba(234, 88, 12, 0.2);
 }
 
-.status-badge-wait-buy {
-  background: #fdf4ff;
-  color: #d946ef;
-  border: 1px solid rgba(217, 70, 239, 0.2);
-}
-
 .status-badge-list {
-  background: #fefce8;
-  color: #eab308;
-  border: 1px solid rgba(234, 179, 8, 0.2);
+  background: #faf5ff;
+  color: #9333ea;
+  border: 1px solid rgba(147, 51, 234, 0.2);
 }
 
 .status-badge-other {
@@ -1152,7 +1152,7 @@ h1 {
 
 /* Value Specific Helper Colors */
 .color-grey {
-  color: var(--text-muted) !important;
+  color: #94a3b8 !important;
 }
 
 .color-green {
@@ -1165,6 +1165,18 @@ h1 {
 
 .color-black {
   color: var(--text-main) !important;
+}
+
+.color-gold {
+  color: #b45309 !important;
+}
+
+.color-orange {
+  color: #ea580c !important;
+}
+
+.color-green-dark {
+  color: #047857 !important;
 }
 
 /* Calculator Popover Styles */
@@ -1472,6 +1484,11 @@ h1 {
 .text-red {
   color: var(--error) !important;
 }
+
+.text-grey {
+  color: #94a3b8 !important;
+}
+
 
 /* Helper text showing original values under modal inputs */
 .input-helper-text {

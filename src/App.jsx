@@ -148,6 +148,14 @@ const getHoldingAge = (firstBuyDateStr, lastSellDateStr, status) => {
   }
 };
 
+const parseNumber = (val) => {
+  if (val === undefined || val === null || val === '') return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  const cleaned = String(val).replace(/[^0-9.-]/g, '');
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 const calculateTargetAmount = (startDateStr, pricePerMonth) => {
   if (!startDateStr || !pricePerMonth) return 0;
   try {
@@ -166,45 +174,45 @@ const calculateTargetAmount = (startDateStr, pricePerMonth) => {
 const getSortValue = (stock, option, originalIdx) => {
   switch (option) {
     case 'ลำดับที่': {
-      const order = parseFloat(stock["ลำดับการซื้อ"]);
-      return isNaN(order) ? originalIdx : order;
+      const order = parseNumber(stock["ลำดับการซื้อ"]);
+      return isNaN(order) || order === 0 ? originalIdx : order;
     }
     case 'มูลค่าตลาด':
-      return parseFloat(stock["มูลค่าตลาด ($)"]) || 0;
+      return parseNumber(stock["มูลค่าตลาด ($)"]);
     case 'ราคาหุ้น':
-      return parseFloat(stock["ราคาหุ้น ($)"]) || 0;
+      return parseNumber(stock["ราคาหุ้น ($)"]);
     case 'ปันผล':
-      return parseFloat(stock["อัตราปันผล (%)"]) || 0;
+      return parseNumber(stock["อัตราปันผล (%)"]);
     case 'ราคาตั้งซื้อ':
-      return parseFloat(stock["ราคาตั้งซื้อ ($)"]) || 0;
+      return parseNumber(stock["ราคาตั้งซื้อ ($)"]);
     case 'ยอดตั้งซื้อ': {
-      const targetPrice = parseFloat(stock["ราคาตั้งซื้อ ($)"]) || 0;
+      const targetPrice = parseNumber(stock["ราคาตั้งซื้อ ($)"]);
       const targetAmount = targetPrice > 0 ? calculateTargetAmount(stock["วันที่กำหนด"], stock["ราคาตั้งซื้อ ($)"]) : 0;
       return (stock.port === 'Trade' || targetPrice <= 0)
         ? 0
-        : targetAmount - (parseFloat(stock["ยอดซื้อ ($)"]) || 0) + (parseFloat(stock["ยอดขาย ($)"]) || 0);
+        : targetAmount - parseNumber(stock["ยอดซื้อ ($)"]) + parseNumber(stock["ยอดขาย ($)"]);
     }
     case 'ยอดซื้อ':
-      return parseFloat(stock["ยอดซื้อ ($)"]) || 0;
+      return parseNumber(stock["ยอดซื้อ ($)"]);
     case 'ยอดขาย':
-      return parseFloat(stock["ยอดขาย ($)"]) || 0;
+      return parseNumber(stock["ยอดขาย ($)"]);
     case 'ยอดกำไร':
       return stock["สถานะ"] === "ขายแล้ว" || stock["สถานะ"] === "รอซื้อ"
-        ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
+        ? parseNumber(stock["ยอดขาย ($)"]) - parseNumber(stock["ยอดซื้อ ($)"])
         : 0;
     case 'ยอดปันผล':
-      return parseFloat(stock["ยอดปันผล ($)"]) || 0;
+      return parseNumber(stock["ยอดปันผล ($)"]);
     case 'ยอดภาษี': {
       const taxVal = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
-      return parseFloat(taxVal) || 0;
+      return parseNumber(taxVal);
     }
     case 'กำไรสุทธิ': {
       const totalProfit = stock["สถานะ"] === "ขายแล้ว" || stock["สถานะ"] === "รอซื้อ"
-        ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
+        ? parseNumber(stock["ยอดขาย ($)"]) - parseNumber(stock["ยอดซื้อ ($)"])
         : 0;
       const taxVal = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
       const clearVal = stock["ยอดกำจัด ($)"] || stock["clear_amount"] || 0;
-      return totalProfit + ((parseFloat(stock["ยอดปันผล ($)"]) || 0) - (parseFloat(taxVal) || 0)) - (parseFloat(clearVal) || 0);
+      return totalProfit + (parseNumber(stock["ยอดปันผล ($)"]) - parseNumber(taxVal)) - parseNumber(clearVal);
     }
     default:
       return originalIdx;
@@ -382,64 +390,128 @@ function App() {
 
   const summary = useMemo(() => {
     const totalStocks = mainTabData.length;
+    
+    // Count held and not held stocks based on status
+    const heldCount = mainTabData.filter(item => 
+      ['ซื้อแล้ว', 'รอขาย', 'ขายบางส่วน'].includes(item["สถานะ"])
+    ).length;
+    
+    const notHeldCount = mainTabData.filter(item => 
+      ['ขายแล้ว', 'รอซื้อ', 'ลิสต์'].includes(item["สถานะ"])
+    ).length;
+
     const avgDividend = mainTabData.length > 0 
-      ? mainTabData.reduce((acc, item) => acc + (parseFloat(item["อัตราปันผล (%)"]) || 0), 0) / mainTabData.length 
+      ? mainTabData.reduce((acc, item) => acc + parseNumber(item["อัตราปันผล (%)"]), 0) / mainTabData.length 
       : 0;
     
     // Sums for the new requested cards
-    const totalTargetPrice = mainTabData.reduce((acc, item) => acc + (parseFloat(item["ราคาตั้งซื้อ ($)"]) || 0), 0);
-    const totalBuyAmount = mainTabData.reduce((acc, item) => acc + (parseFloat(item["ยอดซื้อ ($)"]) || 0), 0);
-    const totalSellAmount = mainTabData.reduce((acc, item) => acc + (parseFloat(item["ยอดขาย ($)"]) || 0), 0);
+    const totalTargetPrice = mainTabData.reduce((acc, item) => acc + parseNumber(item["ราคาตั้งซื้อ ($)"]), 0);
+    const totalBuyAmount = mainTabData.reduce((acc, item) => acc + parseNumber(item["ยอดซื้อ ($)"]), 0);
+    const totalSellAmount = mainTabData.reduce((acc, item) => acc + parseNumber(item["ยอดขาย ($)"]), 0);
     
     // Total Remaining Target (Need to calculate per item then sum)
     const totalRemainingTarget = mainTabData.reduce((acc, item) => {
-      const targetPrice = parseFloat(item["ราคาตั้งซื้อ ($)"]) || 0;
+      const targetPrice = parseNumber(item["ราคาตั้งซื้อ ($)"]);
       if (item.port !== 'Trade' && targetPrice > 0) {
         const targetAmount = calculateTargetAmount(item["วันที่กำหนด"], item["ราคาตั้งซื้อ ($)"]);
-        const remainingTarget = targetAmount - (parseFloat(item["ยอดซื้อ ($)"]) || 0) + (parseFloat(item["ยอดขาย ($)"]) || 0);
+        const remainingTarget = targetAmount - parseNumber(item["ยอดซื้อ ($)"]) + parseNumber(item["ยอดขาย ($)"]);
         return acc + remainingTarget;
       }
       return acc;
     }, 0);
 
+    // Total Target Clear Amount (Need to calculate per item then sum)
+    const totalTargetClearAmount = mainTabData.reduce((acc, item) => {
+      const dividendAmount = parseNumber(item["ยอดปันผล ($)"]);
+      const taxVal = item["ภาษีปันผล ($)"] || item["ภาษี ($)"] || item["ยอดภาษี ($)"] || 0;
+      const taxAmount = parseNumber(taxVal);
+      const clearRateVal = parseFloat(item["อัตรากำจัด (%)"]) || parseFloat(item["clear_rate"]) || 0;
+      const clearAmountVal = item["ยอดกำจัด ($)"] || item["clear_amount"] || 0;
+      
+      const targetClear = (dividendAmount - taxAmount) * (clearRateVal / 100) - parseNumber(clearAmountVal);
+      return acc + targetClear;
+    }, 0);
+    const roundedTotalTargetClearAmount = Math.round(totalTargetClearAmount * 100) / 100;
+
+
     // Sum of Total Profit/Loss (only calculated for status 'ขายแล้ว' and 'รอซื้อ')
     const totalProfitSum = mainTabData.reduce((acc, item) => {
       if (item["สถานะ"] === "ขายแล้ว" || item["สถานะ"] === "รอซื้อ") {
-        const profit = (parseFloat(item["ยอดขาย ($)"]) || 0) - (parseFloat(item["ยอดซื้อ ($)"]) || 0);
+        const profit = parseNumber(item["ยอดขาย ($)"]) - parseNumber(item["ยอดซื้อ ($)"]);
         return acc + profit;
       }
       return acc;
     }, 0);
 
+    // Sum of Total Buy Amount for only 'ขายแล้ว' and 'รอซื้อ' status
+    const soldOrWaitBuyTotalBuyAmount = mainTabData.reduce((acc, item) => {
+      if (item["สถานะ"] === "ขายแล้ว" || item["สถานะ"] === "รอซื้อ") {
+        return acc + parseNumber(item["ยอดซื้อ ($)"]);
+      }
+      return acc;
+    }, 0);
+
+    // Total Profit percentage from total buy amount of sold/wait buy stocks
+    const totalProfitPercent = soldOrWaitBuyTotalBuyAmount > 0 ? (totalProfitSum / soldOrWaitBuyTotalBuyAmount) * 100 : 0;
+
     // Sum of Total Dividend
-    const totalDividendSum = mainTabData.reduce((acc, item) => acc + (parseFloat(item["ยอดปันผล ($)"]) || 0), 0);
+    const totalDividendSum = mainTabData.reduce((acc, item) => acc + parseNumber(item["ยอดปันผล ($)"]), 0);
 
     // Sum of Total Tax
     const totalTaxSum = mainTabData.reduce((acc, item) => {
       const taxVal = item["ภาษีปันผล ($)"] || item["ภาษี ($)"] || item["ยอดภาษี ($)"] || 0;
-      return acc + (parseFloat(taxVal) || 0);
+      return acc + parseNumber(taxVal);
     }, 0);
 
     // Sum of Total Clear Amount
     const totalClearSum = mainTabData.reduce((acc, item) => {
-      const clearVal = item["ยอดกำจัด ($)"] || item["clear_amount"] || 0;
-      return acc + (parseFloat(clearVal) || 0);
+      const clearVal = item ? (item["ยอดกำจัด ($)"] || item["clear_amount"]) : 0;
+      return acc + parseNumber(clearVal);
     }, 0);
 
     // Sum of Total Net Income
     const totalIncomeSum = totalProfitSum + (totalDividendSum - totalTaxSum) - totalClearSum;
     
+    // Net profit percentage from total buy amount
+    const netProfitPercent = totalBuyAmount > 0 ? (totalIncomeSum / totalBuyAmount) * 100 : 0;
+    
+    // Total Dividend percentage from total buy amount
+    const totalDividendPercent = totalBuyAmount > 0 ? (totalDividendSum / totalBuyAmount) * 100 : 0;
+
+    // Total Tax percentage from total dividend sum
+    const totalTaxPercent = totalDividendSum > 0 ? (totalTaxSum / totalDividendSum) * 100 : 0;
+
+    // Total Clear percentage from net dividend
+    const totalDividendNet = totalDividendSum - totalTaxSum;
+    const totalClearPercent = totalDividendNet > 0 ? (totalClearSum / totalDividendNet) * 100 : 0;
+
+    // Total Gross Profit Sum (totalProfitSum + totalDividendSum)
+    const totalGrossProfitSum = totalProfitSum + totalDividendSum;
+    const totalGrossProfitPercent = totalBuyAmount > 0 ? (totalGrossProfitSum / totalBuyAmount) * 100 : 0;
+
     return {
       totalStocks,
+      heldCount,
+      notHeldCount,
       avgDividend,
       totalTargetPrice,
       totalBuyAmount,
       totalSellAmount,
       totalRemainingTarget,
+      totalTargetClearAmount: roundedTotalTargetClearAmount,
       totalProfitSum,
+
+      totalProfitPercent,
       totalDividendSum,
+      totalDividendPercent,
       totalTaxSum,
-      totalIncomeSum
+      totalTaxPercent,
+      totalClearSum,
+      totalClearPercent,
+      totalGrossProfitSum,
+      totalGrossProfitPercent,
+      totalIncomeSum,
+      netProfitPercent
     };
   }, [mainTabData]);
 
@@ -525,9 +597,23 @@ function App() {
       <div className="summary-grid">
         <SummaryCard 
           label="จำนวนหุ้น" 
-          value={summary.totalStocks} 
-          icon={<i className="fa-solid fa-chart-pie" style={{ fontSize: '20px', color: 'var(--secondary)' }}></i>}
+          value={`${summary.totalStocks} หุ้น`} 
+          subValue={
+            <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.375rem', flexWrap: 'wrap', opacity: 1 }}>
+              <span className={`status-badge ${summary.heldCount === 0 ? 'status-badge-sold' : 'status-badge-holding'}`} style={{ fontSize: '0.65rem', padding: '0.25rem 0.6rem', borderRadius: '20px', lineHeight: '1', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title="ถืออยู่">
+                <i className="fa-solid fa-circle-check" style={{ fontSize: '0.7rem' }}></i>
+                {summary.heldCount}
+              </span>
+              <span className="status-badge status-badge-sold" style={{ fontSize: '0.65rem', padding: '0.25rem 0.6rem', borderRadius: '20px', lineHeight: '1', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title="ไม่ถือ/ขายแล้ว/รอซื้อ">
+                <i className="fa-solid fa-circle-xmark" style={{ fontSize: '0.7rem' }}></i>
+                {summary.notHeldCount}
+              </span>
+            </div>
+          }
+          icon={<i className="fa-solid fa-chart-pie" style={{ fontSize: '20px', color: summary.heldCount === 0 ? 'var(--text-muted)' : 'var(--secondary)' }}></i>}
           delay={0.1}
+          numValue={summary.heldCount}
+          colorMode="binary"
         />
         <SummaryCard 
           label="ปันผลเฉลี่ย" 
@@ -553,60 +639,233 @@ function App() {
           icon={<i className="fa-solid fa-bars-progress" style={{ fontSize: '20px', color: 'var(--warning)' }}></i>}
           delay={0.4}
           numValue={summary.totalRemainingTarget}
+          colorMode="financial-dark"
         />
+        <SummaryCard 
+          label="ยอดตั้งกำจัดทั้งหมด" 
+          value={formatCurrency(summary.totalTargetClearAmount)} 
+          subValue={formatTHB(summary.totalTargetClearAmount * exchangeRate)}
+          icon={<i className="fa-solid fa-filter" style={{ fontSize: '20px', color: summary.totalTargetClearAmount === 0 ? 'var(--text-muted)' : summary.totalTargetClearAmount > 0 ? '#047857' : 'var(--error)' }}></i>}
+          delay={0.45}
+          numValue={summary.totalTargetClearAmount}
+          colorMode="financial-dark"
+        />
+
         <SummaryCard 
           label="ยอดซื้อทั้งหมด" 
           value={formatCurrency(summary.totalBuyAmount)} 
           subValue={formatTHB(summary.totalBuyAmount * exchangeRate)}
-          icon={<i className="fa-solid fa-cart-shopping" style={{ fontSize: '20px', color: 'var(--success)' }}></i>}
+          icon={<i className="fa-solid fa-cart-shopping" style={{ fontSize: '20px', color: summary.totalBuyAmount === 0 ? 'var(--text-muted)' : 'var(--success)' }}></i>}
           delay={0.5}
+          numValue={summary.totalBuyAmount}
+          colorMode="binary"
         />
         <SummaryCard 
           label="ยอดขายทั้งหมด" 
           value={formatCurrency(summary.totalSellAmount)} 
           subValue={formatTHB(summary.totalSellAmount * exchangeRate)}
-          icon={<i className="fa-solid fa-hand-holding-dollar" style={{ fontSize: '20px', color: 'var(--error)' }}></i>}
+          icon={<i className="fa-solid fa-hand-holding-dollar" style={{ fontSize: '20px', color: summary.totalSellAmount === 0 ? 'var(--text-muted)' : '#047857' }}></i>}
           delay={0.6}
-        />
-        <SummaryCard 
-          label="ยอดกำไรทั้งหมด" 
-          value={formatCurrency(summary.totalProfitSum)} 
-          subValue={formatTHB(summary.totalProfitSum * exchangeRate)}
-          icon={<i className="fa-solid fa-arrow-trend-up" style={{ fontSize: '20px', color: summary.totalProfitSum >= 0 ? 'var(--success)' : 'var(--error)' }}></i>}
-          delay={0.7}
-          numValue={summary.totalProfitSum}
+          numValue={summary.totalSellAmount}
+          colorMode="financial-dark"
         />
         <SummaryCard 
           label="ยอดปันผลทั้งหมด" 
           value={formatCurrency(summary.totalDividendSum)} 
-          subValue={formatTHB(summary.totalDividendSum * exchangeRate)}
-          icon={<i className="fa-solid fa-coins" style={{ fontSize: '20px', color: 'var(--success)' }}></i>}
-          delay={0.8}
+          subValue={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
+              <span>{formatTHB(summary.totalDividendSum * exchangeRate)}</span>
+              <span 
+                style={{ 
+                  fontSize: '0.65rem', 
+                  padding: '0.2rem 0.5rem', 
+                  borderRadius: '20px', 
+                  fontWeight: 700, 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.15rem', 
+                  lineHeight: '1', 
+                  background: summary.totalDividendSum === 0 ? 'rgba(148, 163, 184, 0.1)' : summary.totalDividendSum > 0 ? 'rgba(4, 120, 87, 0.1)' : 'rgba(220, 38, 38, 0.1)', 
+                  color: summary.totalDividendSum === 0 ? '#94a3b8' : summary.totalDividendSum > 0 ? '#047857' : '#dc2626', 
+                  border: `1px solid ${summary.totalDividendSum === 0 ? 'rgba(148, 163, 184, 0.2)' : summary.totalDividendSum > 0 ? 'rgba(4, 120, 87, 0.2)' : 'rgba(220, 38, 38, 0.2)'}` 
+                }}
+              >
+                {summary.totalDividendSum !== 0 && (
+                  <i className={`fa-solid ${summary.totalDividendSum > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}`} style={{ fontSize: '0.65rem' }}></i>
+                )}
+                {summary.totalDividendSum > 0 ? '+' : ''}{summary.totalDividendPercent.toFixed(2)}%
+              </span>
+            </div>
+          }
+          icon={<i className="fa-solid fa-coins" style={{ fontSize: '20px', color: summary.totalDividendSum === 0 ? 'var(--text-muted)' : '#047857' }}></i>}
+          delay={0.7}
           numValue={summary.totalDividendSum}
-          colorMode="binary"
+          colorMode="financial-dark"
         />
         <SummaryCard 
           label="ยอดภาษีทั้งหมด" 
           value={formatCurrency(summary.totalTaxSum)} 
-          subValue={formatTHB(summary.totalTaxSum * exchangeRate)}
-          icon={<i className="fa-solid fa-file-invoice-dollar" style={{ fontSize: '20px', color: 'var(--error)' }}></i>}
-          delay={0.9}
+          subValue={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
+              <span>{formatTHB(summary.totalTaxSum * exchangeRate)}</span>
+              <span 
+                style={{ 
+                  fontSize: '0.65rem', 
+                  padding: '0.2rem 0.5rem', 
+                  borderRadius: '20px', 
+                  fontWeight: 700, 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.15rem', 
+                  lineHeight: '1', 
+                  background: summary.totalTaxSum > 0 ? 'rgba(234, 88, 12, 0.1)' : 'rgba(148, 163, 184, 0.1)', 
+                  color: summary.totalTaxSum > 0 ? '#ea580c' : '#94a3b8', 
+                  border: `1px solid ${summary.totalTaxSum > 0 ? 'rgba(234, 88, 12, 0.2)' : 'rgba(148, 163, 184, 0.2)'}` 
+                }}
+              >
+                {summary.totalTaxSum > 0 ? '+' : ''}{summary.totalTaxPercent.toFixed(2)}%
+              </span>
+            </div>
+          }
+          icon={<i className="fa-solid fa-file-invoice-dollar" style={{ fontSize: '20px', color: summary.totalTaxSum === 0 ? 'var(--text-muted)' : '#ea580c' }}></i>}
+          delay={0.8}
           numValue={summary.totalTaxSum}
-          colorMode="binary"
+          colorMode="orange"
+        />
+        <SummaryCard 
+          label="ยอดกำจัดทั้งหมด" 
+          value={formatCurrency(summary.totalClearSum)} 
+          subValue={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
+              <span>{formatTHB(summary.totalClearSum * exchangeRate)}</span>
+              <span 
+                style={{ 
+                  fontSize: '0.65rem', 
+                  padding: '0.2rem 0.5rem', 
+                  borderRadius: '20px', 
+                  fontWeight: 700, 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.15rem', 
+                  lineHeight: '1', 
+                  background: summary.totalClearSum > 0 ? 'rgba(234, 88, 12, 0.1)' : 'rgba(148, 163, 184, 0.1)', 
+                  color: summary.totalClearSum > 0 ? '#ea580c' : '#94a3b8', 
+                  border: `1px solid ${summary.totalClearSum > 0 ? 'rgba(234, 88, 12, 0.2)' : 'rgba(148, 163, 184, 0.2)'}` 
+                }}
+              >
+                {summary.totalClearSum > 0 ? '+' : ''}{summary.totalClearPercent.toFixed(2)}%
+              </span>
+            </div>
+          }
+          icon={<i className="fa-solid fa-scissors" style={{ fontSize: '20px', color: summary.totalClearSum === 0 ? 'var(--text-muted)' : '#ea580c' }}></i>}
+          delay={0.9}
+          numValue={summary.totalClearSum}
+          colorMode="orange"
+        />
+        <SummaryCard 
+          label="กำไรขายทั้งหมด" 
+          value={formatCurrency(summary.totalProfitSum)} 
+          subValue={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
+              <span>{formatTHB(summary.totalProfitSum * exchangeRate)}</span>
+              <span 
+                style={{ 
+                  fontSize: '0.65rem', 
+                  padding: '0.2rem 0.5rem', 
+                  borderRadius: '20px', 
+                  fontWeight: 700, 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.15rem', 
+                  lineHeight: '1', 
+                  background: summary.totalProfitSum === 0 ? 'rgba(148, 163, 184, 0.1)' : summary.totalProfitSum > 0 ? 'rgba(4, 120, 87, 0.1)' : 'rgba(220, 38, 38, 0.1)', 
+                  color: summary.totalProfitSum === 0 ? '#94a3b8' : summary.totalProfitSum > 0 ? '#047857' : '#dc2626', 
+                  border: `1px solid ${summary.totalProfitSum === 0 ? 'rgba(148, 163, 184, 0.2)' : summary.totalProfitSum > 0 ? 'rgba(4, 120, 87, 0.2)' : 'rgba(220, 38, 38, 0.2)'}` 
+                }}
+              >
+                {summary.totalProfitSum !== 0 && (
+                  <i className={`fa-solid ${summary.totalProfitSum > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}`} style={{ fontSize: '0.65rem' }}></i>
+                )}
+                {summary.totalProfitSum > 0 ? '+' : ''}{summary.totalProfitPercent.toFixed(2)}%
+              </span>
+            </div>
+          }
+          icon={<i className="fa-solid fa-arrow-trend-up" style={{ fontSize: '20px', color: summary.totalProfitSum >= 0 ? '#047857' : 'var(--error)' }}></i>}
+          delay={1.0}
+          numValue={summary.totalProfitSum}
+          colorMode="financial-dark"
+        />
+        <SummaryCard 
+          label="กำไรรวมทั้งหมด" 
+          value={formatCurrency(summary.totalGrossProfitSum)} 
+          subValue={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
+              <span>{formatTHB(summary.totalGrossProfitSum * exchangeRate)}</span>
+              <span 
+                style={{ 
+                  fontSize: '0.65rem', 
+                  padding: '0.2rem 0.5rem', 
+                  borderRadius: '20px', 
+                  fontWeight: 700, 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.15rem', 
+                  lineHeight: '1', 
+                  background: summary.totalGrossProfitSum === 0 ? 'rgba(148, 163, 184, 0.1)' : summary.totalGrossProfitSum > 0 ? 'rgba(4, 120, 87, 0.1)' : 'rgba(220, 38, 38, 0.1)', 
+                  color: summary.totalGrossProfitSum === 0 ? '#94a3b8' : summary.totalGrossProfitSum > 0 ? '#047857' : '#dc2626', 
+                  border: `1px solid ${summary.totalGrossProfitSum === 0 ? 'rgba(148, 163, 184, 0.2)' : summary.totalGrossProfitSum > 0 ? 'rgba(4, 120, 87, 0.2)' : 'rgba(220, 38, 38, 0.2)'}` 
+                }}
+              >
+                {summary.totalGrossProfitSum !== 0 && (
+                  <i className={`fa-solid ${summary.totalGrossProfitSum > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}`} style={{ fontSize: '0.65rem' }}></i>
+                )}
+                {summary.totalGrossProfitSum > 0 ? '+' : ''}{summary.totalGrossProfitPercent.toFixed(2)}%
+              </span>
+            </div>
+          }
+          icon={<i className="fa-solid fa-chart-line" style={{ fontSize: '20px', color: summary.totalGrossProfitSum >= 0 ? '#047857' : 'var(--error)' }}></i>}
+          delay={1.1}
+          numValue={summary.totalGrossProfitSum}
+          colorMode="financial-dark"
         />
         <SummaryCard 
           label="กำไรสุทธิทั้งหมด" 
           value={formatCurrency(summary.totalIncomeSum)} 
-          subValue={formatTHB(summary.totalIncomeSum * exchangeRate)}
-          icon={<i className="fa-solid fa-wallet" style={{ fontSize: '20px', color: summary.totalIncomeSum >= 0 ? 'var(--success)' : 'var(--error)' }}></i>}
-          delay={1.0}
+          subValue={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
+              <span>{formatTHB(summary.totalIncomeSum * exchangeRate)}</span>
+              <span 
+                style={{ 
+                  fontSize: '0.65rem', 
+                  padding: '0.2rem 0.5rem', 
+                  borderRadius: '20px', 
+                  fontWeight: 700, 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.15rem', 
+                  lineHeight: '1', 
+                  background: summary.totalIncomeSum === 0 ? 'rgba(148, 163, 184, 0.1)' : summary.totalIncomeSum > 0 ? 'rgba(4, 120, 87, 0.1)' : 'rgba(220, 38, 38, 0.1)', 
+                  color: summary.totalIncomeSum === 0 ? '#94a3b8' : summary.totalIncomeSum > 0 ? '#047857' : '#dc2626', 
+                  border: `1px solid ${summary.totalIncomeSum === 0 ? 'rgba(148, 163, 184, 0.2)' : summary.totalIncomeSum > 0 ? 'rgba(4, 120, 87, 0.2)' : 'rgba(220, 38, 38, 0.2)'}` 
+                }}
+              >
+                {summary.totalIncomeSum !== 0 && (
+                  <i className={`fa-solid ${summary.totalIncomeSum > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}`} style={{ fontSize: '0.65rem' }}></i>
+                )}
+                {summary.totalIncomeSum > 0 ? '+' : ''}{summary.netProfitPercent.toFixed(2)}%
+              </span>
+            </div>
+          }
+          icon={<i className="fa-solid fa-wallet" style={{ fontSize: '20px', color: summary.totalIncomeSum >= 0 ? '#047857' : 'var(--error)' }}></i>}
+          delay={1.2}
           numValue={summary.totalIncomeSum}
+          colorMode="financial-dark"
         />
       </div>
 
       {/* List Controls: Sub Tabs & Search */}
       <h2 className="section-title animate-fade-in" style={{ marginBottom: '0.5rem' }}>
-        <span>รายการพอร์ต</span>
+        <span>รายการสินทรัพย์</span>
         {activeSubTab !== 'All' && (
           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--secondary)', background: 'rgba(219, 39, 119, 0.08)', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>{activeSubTab}</span>
         )}
@@ -772,6 +1031,14 @@ function SummaryCard({ label, value, subValue, icon, delay, numValue, colorMode 
     if (colorMode === 'binary') {
       return numValue === 0 ? 'color-grey' : 'color-black';
     }
+    if (colorMode === 'orange') {
+      return numValue === 0 ? 'color-grey' : 'color-orange';
+    }
+    if (colorMode === 'financial-dark') {
+      if (numValue === 0) return 'color-grey';
+      if (numValue > 0) return 'color-green-dark';
+      return 'color-red';
+    }
     if (numValue === 0) return 'color-grey';
     if (numValue > 0) return 'color-green';
     return 'color-red';
@@ -900,35 +1167,62 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
   const ticker = stock["ชื่อหุ้น"];
   const logoUrl = `https://assets.parqet.com/logos/symbol/${ticker}?format=png`;
 
-  const DetailItem = ({ label, value, isMoney = false, relativeTime = '', colorClass = '' }) => {
-    const parsedValue = parseFloat(value) || 0;
+  const DetailItem = ({ label, value, isMoney = false, relativeTime = '', colorClass = '', percent = null }) => {
+    const parsedValue = parseNumber(value);
     return (
       <div className={`detail-item ${colorClass}`}>
         <span className="detail-label">{label}</span>
         <span className={`detail-value ${colorClass.startsWith('color-') ? colorClass : ''}`}>
-          {isMoney ? `$${parsedValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : value || '-'}
-          {relativeTime && <span className="relative-time"> {relativeTime}</span>}
+          {isMoney ? (parsedValue < 0 ? `-$${Math.abs(parsedValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${parsedValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`) : value || '-'}
+          {relativeTime && <span className="relative-time">{relativeTime}</span>}
         </span>
         {isMoney && (
-          <span className={`detail-sub-value ${colorClass.startsWith('color-') ? colorClass : ''}`}>
-            ≈ ฿{(parsedValue * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <span 
+            className={`detail-sub-value ${colorClass.startsWith('color-') ? colorClass : ''}`}
+            style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.25rem', flexWrap: 'wrap' }}
+          >
+            <span>
+              ≈ {parsedValue * exchangeRate < 0 ? `-฿${Math.abs(parsedValue * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `฿${(parsedValue * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            </span>
+            {percent !== null && percent !== undefined && (
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: Math.abs(percent) < 1e-9 ? '#94a3b8' : undefined }}>
+                ({percent > 0 ? '+' : ''}{percent.toFixed(2)}%)
+              </span>
+            )}
           </span>
         )}
       </div>
     );
   };
 
-  const targetPrice = parseFloat(stock["ราคาตั้งซื้อ ($)"]) || 0;
+  const targetPrice = parseNumber(stock["ราคาตั้งซื้อ ($)"]);
   const targetAmount = targetPrice > 0 ? calculateTargetAmount(stock["วันที่กำหนด"], stock["ราคาตั้งซื้อ ($)"]) : 0;
   const remainingTarget = (stock.port === 'Trade' || targetPrice <= 0)
     ? 0
-    : targetAmount - (parseFloat(stock["ยอดซื้อ ($)"]) || 0) + (parseFloat(stock["ยอดขาย ($)"]) || 0);
+    : targetAmount - parseNumber(stock["ยอดซื้อ ($)"]) + parseNumber(stock["ยอดขาย ($)"]);
   const totalProfit = stock["สถานะ"] === "ขายแล้ว" || stock["สถานะ"] === "รอซื้อ"
-    ? (parseFloat(stock["ยอดขาย ($)"]) || 0) - (parseFloat(stock["ยอดซื้อ ($)"]) || 0)
+    ? parseNumber(stock["ยอดขาย ($)"]) - parseNumber(stock["ยอดซื้อ ($)"])
     : 0;
   const taxVal = stock["ภาษีปันผล ($)"] || stock["ภาษี ($)"] || stock["ยอดภาษี ($)"] || 0;
   const clearAmountVal = stock["ยอดกำจัด ($)"] || stock["clear_amount"] || 0;
-  const netIncome = totalProfit + ((parseFloat(stock["ยอดปันผล ($)"]) || 0) - (parseFloat(taxVal) || 0)) - (parseFloat(clearAmountVal) || 0);
+  const netIncome = totalProfit + (parseNumber(stock["ยอดปันผล ($)"]) - parseNumber(taxVal)) - parseNumber(clearAmountVal);
+
+  const buyAmount = parseNumber(stock["ยอดซื้อ ($)"]);
+  const dividendAmount = parseNumber(stock["ยอดปันผล ($)"]);
+  const taxAmount = parseNumber(taxVal);
+  const dividendNet = dividendAmount - taxAmount;
+  const profitPercent = buyAmount > 0 ? (totalProfit / buyAmount) * 100 : 0;
+  const grossProfit = totalProfit + dividendAmount;
+  const grossProfitPercent = buyAmount > 0 ? (grossProfit / buyAmount) * 100 : 0;
+  const netIncomePercent = buyAmount > 0 ? (netIncome / buyAmount) * 100 : 0;
+  const dividendPercent = buyAmount > 0 ? (dividendAmount / buyAmount) * 100 : 0;
+  const taxPercent = dividendAmount > 0 ? (taxAmount / dividendAmount) * 100 : 0;
+  const clearPercent = dividendNet > 0 ? (parseNumber(clearAmountVal) / dividendNet) * 100 : 0;
+
+  const clearRateVal = parseFloat(stock["อัตรากำจัด (%)"]) || parseFloat(stock["clear_rate"]) || 0;
+  const rawTargetClearAmount = (dividendAmount - taxAmount) * (clearRateVal / 100) - parseNumber(clearAmountVal);
+  const targetClearAmount = Math.round(rawTargetClearAmount * 100) / 100;
+
 
   const getStatusColor = (val) => {
     if (val === 0) return 'status-grey';
@@ -937,8 +1231,18 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
   };
 
   const getBinaryColorClass = (val) => {
-    const num = parseFloat(val) || 0;
+    const num = parseNumber(val);
     return num === 0 ? 'color-grey' : 'color-black';
+  };
+
+  const getGoldColorClass = (val) => {
+    const num = parseNumber(val);
+    return num === 0 ? 'color-grey' : 'color-gold';
+  };
+
+  const getOrangeColorClass = (val) => {
+    const num = parseNumber(val);
+    return num === 0 ? 'color-grey' : 'color-orange';
   };
 
   return (
@@ -1008,16 +1312,16 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
                 <div 
                   className={`clear-rate-tag ${clearRateVal === 0 ? 'clear-rate-tag-zero' : ''}`}
                   style={{ 
-                    background: clearRateVal === 0 ? '#f1f5f9' : '#e0f2fe', 
-                    color: clearRateVal === 0 ? 'var(--text-muted)' : '#0284c7', 
+                    background: clearRateVal === 0 ? '#f1f5f9' : '#fff7ed', 
+                    color: clearRateVal === 0 ? 'var(--text-muted)' : '#ea580c', 
                     padding: '0.25rem 0.5rem', 
                     borderRadius: '6px', 
                     fontSize: '0.75rem', 
                     fontWeight: 600,
-                    border: clearRateVal === 0 ? '1px solid rgba(100, 116, 139, 0.12)' : '1px solid rgba(2, 132, 199, 0.18)'
+                    border: clearRateVal === 0 ? '1px solid rgba(100, 116, 139, 0.12)' : '1px solid rgba(234, 88, 12, 0.2)'
                   }}
                 >
-                  กำจัด {clearRateVal.toFixed(2)}%
+                    กำจัด {clearRateVal.toFixed(2)}%
                 </div>
               );
             })()}
@@ -1048,15 +1352,15 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem' }}>
                 <span className="detail-label">มูลค่าตลาด</span>
                 <span style={{ color: 'var(--text-main)', fontWeight: 700, fontSize: '0.95rem' }}>
-                  {formatCurrency(parseFloat(stock["มูลค่าตลาด ($)"]) || 0)}
+                  {formatCurrency(parseNumber(stock["มูลค่าตลาด ($)"]))}
                 </span>
               </div>
             )}
             {stock["มูลค่าตลาด ($)"] && <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>•</span>}
             <span className="detail-label">ราคาหุ้น</span>
-            <span className="price-value">${(parseFloat(stock["ราคาหุ้น ($)"]) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="price-value">${parseNumber(stock["ราคาหุ้น ($)"]).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-              (≈ ฿{((parseFloat(stock["ราคาหุ้น ($)"]) || 0) * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+              (≈ ฿{(parseNumber(stock["ราคาหุ้น ($)"]) * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
             </span>
           </div>
         </div>
@@ -1065,13 +1369,15 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
       <div className="stock-details-grid">
         <DetailItem label="ราคาตั้งซื้อ" value={stock["ราคาตั้งซื้อ ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ราคาตั้งซื้อ ($)"])} />
         <DetailItem label="ยอดตั้งซื้อ" value={remainingTarget} isMoney={true} colorClass={getStatusColor(remainingTarget)} />
-        <DetailItem label="ยอดซื้อ" value={stock["ยอดซื้อ ($)"]} isMoney={true} />
-        <DetailItem label="ยอดขาย" value={stock["ยอดขาย ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดขาย ($)"])} />
-        <DetailItem label="ยอดกำไร" value={totalProfit} isMoney={true} colorClass={getStatusColor(totalProfit)} />
-        <DetailItem label="ยอดปันผล" value={stock["ยอดปันผล ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดปันผล ($)"])} />
-        <DetailItem label="ยอดภาษี" value={taxVal} isMoney={true} colorClass={getBinaryColorClass(taxVal)} />
-        <DetailItem label="ยอดกำจัด" value={clearAmountVal} isMoney={true} colorClass={getBinaryColorClass(clearAmountVal)} />
-        <DetailItem label="กำไรสุทธิ" value={netIncome} isMoney={true} colorClass={getStatusColor(netIncome)} />
+        <DetailItem label="ยอดตั้งกำจัด" value={targetClearAmount} isMoney={true} colorClass={getStatusColor(targetClearAmount)} />
+        <DetailItem label="ยอดซื้อ" value={stock["ยอดซื้อ ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดซื้อ ($)"])} />
+        <DetailItem label="ยอดขาย" value={stock["ยอดขาย ($)"]} isMoney={true} colorClass={getStatusColor(parseNumber(stock["ยอดขาย ($)"]))} />
+        <DetailItem label="ยอดปันผล" value={stock["ยอดปันผล ($)"]} isMoney={true} colorClass={getStatusColor(parseNumber(stock["ยอดปันผล ($)"]))} percent={dividendPercent} />
+        <DetailItem label="ยอดภาษี" value={taxVal} isMoney={true} colorClass={getOrangeColorClass(taxVal)} percent={taxPercent} />
+        <DetailItem label="ยอดกำจัด" value={clearAmountVal} isMoney={true} colorClass={getOrangeColorClass(clearAmountVal)} percent={clearPercent} />
+        <DetailItem label="กำไรขาย" value={totalProfit} isMoney={true} colorClass={getStatusColor(totalProfit)} percent={profitPercent} />
+        <DetailItem label="กำไรรวม" value={grossProfit} isMoney={true} colorClass={getStatusColor(grossProfit)} percent={grossProfitPercent} />
+        <DetailItem label="กำไรสุทธิ" value={netIncome} isMoney={true} colorClass={getStatusColor(netIncome)} percent={netIncomePercent} />
       </div>
 
       <div className="stock-card-footer" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
@@ -1080,7 +1386,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
             <InteractiveTime 
               dateStr={stock["วันที่ซื้อครั้งแรก"]}
               customDisplay={`${stock["สถานะ"] === 'ขายแล้ว' ? 'ถือรวม' : 'ถือมา'} ${getHoldingAge(stock["วันที่ซื้อครั้งแรก"], stock["วันที่ขายล่าสุด"], stock["สถานะ"])}`}
-              customStyle={{ background: 'transparent', color: 'var(--text-main)', paddingLeft: 0 }}
+              customStyle={{ background: 'transparent', color: 'var(--text-main)', paddingLeft: '0.5rem' }}
             />
           )}
           {stock["สถานะ"] && (
@@ -1123,18 +1429,21 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
 }
 
 function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
-  const targetPrice = parseFloat(stock["ราคาตั้งซื้อ ($)"]) || 0;
+  const targetPrice = parseNumber(stock["ราคาตั้งซื้อ ($)"]);
   const targetAmount = targetPrice > 0 ? calculateTargetAmount(stock["วันที่กำหนด"], stock["ราคาตั้งซื้อ ($)"]) : 0;
-  const remainingTarget = (stock.port === 'Trade' || targetPrice <= 0)
+  const rawRemainingTarget = (stock.port === 'Trade' || targetPrice <= 0)
     ? 0
-    : targetAmount - (parseFloat(stock["ยอดซื้อ ($)"]) || 0) + (parseFloat(stock["ยอดขาย ($)"]) || 0);
+    : targetAmount - parseNumber(stock["ยอดซื้อ ($)"]) + parseNumber(stock["ยอดขาย ($)"]);
+  const remainingTarget = Math.round(rawRemainingTarget * 100) / 100;
 
   const originalBuyDate = stock["วันที่ซื้อล่าสุด"] ? formatDate(stock["วันที่ซื้อล่าสุด"]) : 'ไม่มี';
   const originalSellDate = stock["วันที่ขายล่าสุด"] ? formatDate(stock["วันที่ขายล่าสุด"]) : 'ไม่มี';
 
   const formatOriginalMoney = (val) => {
-    const num = parseFloat(val) || 0;
-    return `$${num.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    const num = parseNumber(val);
+    return num < 0 
+      ? `-$${Math.abs(num).toLocaleString(undefined, { minimumFractionDigits: 2 })}` 
+      : `$${num.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
 
   const originalBuyAmount = formatOriginalMoney(stock["ยอดซื้อ ($)"]);
@@ -1186,11 +1495,19 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
   const originalBuyAmountRaw = useMemo(() => stock["ยอดซื้อ ($)"] !== undefined && stock["ยอดซื้อ ($)"] !== null ? String(stock["ยอดซื้อ ($)"]) : '', [stock]);
   const originalSellAmountRaw = useMemo(() => stock["ยอดขาย ($)"] !== undefined && stock["ยอดขาย ($)"] !== null ? String(stock["ยอดขาย ($)"]) : '', [stock]);
 
-  const currentTotalProfit = stockStatus === "ขายแล้ว" || stockStatus === "รอซื้อ"
-    ? (parseFloat(sellAmount) || 0) - (parseFloat(buyAmount) || 0)
+  const rawTotalProfit = stockStatus === "ขายแล้ว" || stockStatus === "รอซื้อ"
+    ? parseNumber(sellAmount) - parseNumber(buyAmount)
     : 0;
+  const currentTotalProfit = Math.round(rawTotalProfit * 100) / 100;
 
-  const currentNetIncome = currentTotalProfit + ((parseFloat(dividendAmount) || 0) - (parseFloat(taxAmount) || 0)) - (parseFloat(clearAmount) || 0);
+  const currentGrossProfit = Math.round((currentTotalProfit + parseNumber(dividendAmount)) * 100) / 100;
+
+  const currentNetIncome = Math.round((currentTotalProfit + (parseNumber(dividendAmount) - parseNumber(taxAmount)) - parseNumber(clearAmount)) * 100) / 100;
+
+  const currentClearRateVal = parseFloat(clearRate) || 0;
+  const rawTargetClearAmount = (parseNumber(dividendAmount) - parseNumber(taxAmount)) * (currentClearRateVal / 100) - parseNumber(clearAmount);
+  const currentTargetClearAmount = Math.round(rawTargetClearAmount * 100) / 100;
+
 
 
 
@@ -1558,26 +1875,40 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
               <div className="target-summary-ref" style={{ flexWrap: 'wrap', gap: '0.75rem 0.5rem' }}>
                 <div className="target-ref-card" style={{ minWidth: '100px', flex: '1 1 0' }}>
                   <span className="target-ref-label">ราคาตั้งซื้อ</span>
-                  <span className="target-ref-value" style={{ fontSize: '1rem' }}>${targetPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className={`target-ref-value ${targetPrice === 0 ? 'text-grey' : ''}`} style={{ fontSize: '1rem' }}>${targetPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="target-summary-divider" style={{ margin: '0 0.5rem' }}></div>
                 <div className="target-ref-card" style={{ minWidth: '100px', flex: '1 1 0' }}>
                   <span className="target-ref-label">ยอดตั้งซื้อ</span>
-                  <span className={`target-ref-value ${remainingTarget > 0 ? 'text-green' : remainingTarget < 0 ? 'text-red' : ''}`} style={{ fontSize: '1rem' }}>
+                  <span className={`target-ref-value ${remainingTarget > 0 ? 'text-green' : remainingTarget < 0 ? 'text-red' : 'text-grey'}`} style={{ fontSize: '1rem' }}>
                     ${remainingTarget.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="target-summary-divider" style={{ margin: '0 0.5rem' }}></div>
                 <div className="target-ref-card" style={{ minWidth: '100px', flex: '1 1 0' }}>
-                  <span className="target-ref-label">ยอดกำไร</span>
-                  <span className={`target-ref-value ${currentTotalProfit > 0 ? 'text-green' : currentTotalProfit < 0 ? 'text-red' : ''}`} style={{ fontSize: '1rem' }}>
+                  <span className="target-ref-label">ยอดตั้งกำจัด</span>
+                  <span className={`target-ref-value ${currentTargetClearAmount > 0 ? 'text-green' : currentTargetClearAmount < 0 ? 'text-red' : 'text-grey'}`} style={{ fontSize: '1rem' }}>
+                    ${currentTargetClearAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="target-summary-divider" style={{ margin: '0 0.5rem' }}></div>
+                <div className="target-ref-card" style={{ minWidth: '100px', flex: '1 1 0' }}>
+                  <span className="target-ref-label">กำไรขาย</span>
+                  <span className={`target-ref-value ${currentTotalProfit > 0 ? 'text-green' : currentTotalProfit < 0 ? 'text-red' : 'text-grey'}`} style={{ fontSize: '1rem' }}>
                     ${currentTotalProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="target-summary-divider" style={{ margin: '0 0.5rem' }}></div>
                 <div className="target-ref-card" style={{ minWidth: '100px', flex: '1 1 0' }}>
+                  <span className="target-ref-label">กำไรรวม</span>
+                  <span className={`target-ref-value ${currentGrossProfit > 0 ? 'text-green' : currentGrossProfit < 0 ? 'text-red' : 'text-grey'}`} style={{ fontSize: '1rem' }}>
+                    ${currentGrossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="target-summary-divider" style={{ margin: '0 0.5rem' }}></div>
+                <div className="target-ref-card" style={{ minWidth: '100px', flex: '1 1 0' }}>
                   <span className="target-ref-label">กำไรสุทธิ</span>
-                  <span className={`target-ref-value ${currentNetIncome > 0 ? 'text-green' : currentNetIncome < 0 ? 'text-red' : ''}`} style={{ fontSize: '1rem' }}>
+                  <span className={`target-ref-value ${currentNetIncome > 0 ? 'text-green' : currentNetIncome < 0 ? 'text-red' : 'text-grey'}`} style={{ fontSize: '1rem' }}>
                     ${currentNetIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 </div>
