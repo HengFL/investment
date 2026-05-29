@@ -72,7 +72,7 @@ body {
 }
 
 .container {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 1.25rem 1rem;
 }
@@ -1506,7 +1506,7 @@ h1 {
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  max-width: 600px;
+  max-width: 700px;
 }
 
 .sort-container {

@@ -597,37 +597,49 @@ function App() {
       <div className="summary-grid">
         <SummaryCard 
           label="จำนวนหุ้น" 
-          value={`${summary.totalStocks} หุ้น`} 
-          subValue={
-            <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.375rem', flexWrap: 'wrap', opacity: 1 }}>
-              <span className={`status-badge ${summary.heldCount === 0 ? 'status-badge-sold' : 'status-badge-holding'}`} style={{ fontSize: '0.65rem', padding: '0.25rem 0.6rem', borderRadius: '20px', lineHeight: '1', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title="ถืออยู่">
-                <i className="fa-solid fa-circle-check" style={{ fontSize: '0.7rem' }}></i>
-                {summary.heldCount}
+          value={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span>
+                {summary.totalStocks} หุ้น 
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginLeft: '0.375rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                  (
+                  <i className="fa-solid fa-circle-check" style={{ color: 'var(--success)', fontSize: '0.75rem' }} title="ถืออยู่"></i>
+                  <span>{summary.heldCount}</span>
+                  <span style={{ margin: '0 0.05rem', color: '#cbd5e1' }}>/</span>
+                  <i className="fa-solid fa-circle-xmark" style={{ color: '#94a3b8', fontSize: '0.75rem' }} title="ไม่ถือ/ขายแล้ว/รอซื้อ"></i>
+                  <span>{summary.notHeldCount}</span>
+                  )
+                </span>
               </span>
-              <span className="status-badge status-badge-sold" style={{ fontSize: '0.65rem', padding: '0.25rem 0.6rem', borderRadius: '20px', lineHeight: '1', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }} title="ไม่ถือ/ขายแล้ว/รอซื้อ">
-                <i className="fa-solid fa-circle-xmark" style={{ fontSize: '0.7rem' }}></i>
-                {summary.notHeldCount}
+              <span className="status-badge" style={{ 
+                fontSize: '0.65rem', 
+                padding: '0.25rem 0.6rem', 
+                borderRadius: '20px', 
+                lineHeight: '1', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.25rem', 
+                background: summary.avgDividend <= 0 ? 'rgba(148, 163, 184, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
+                color: summary.avgDividend <= 0 ? 'var(--text-muted)' : 'var(--success)', 
+                border: summary.avgDividend <= 0 ? '1px solid rgba(148, 163, 184, 0.2)' : '1px solid rgba(16, 185, 129, 0.2)' 
+              }} title="ปันผลเฉลี่ย">
+                <i className="fa-solid fa-percent" style={{ fontSize: '0.7rem' }}></i>
+                {summary.avgDividend.toFixed(2)}%
               </span>
             </div>
           }
-          icon={<i className="fa-solid fa-chart-pie" style={{ fontSize: '20px', color: summary.heldCount === 0 ? 'var(--text-muted)' : 'var(--secondary)' }}></i>}
+          icon={<i className="fa-solid fa-chart-pie" style={{ fontSize: '18px', color: '#8b5cf6' }}></i>}
+          iconBgColor="rgba(139, 92, 246, 0.1)"
           delay={0.1}
           numValue={summary.heldCount}
-          colorMode="binary"
-        />
-        <SummaryCard 
-          label="ปันผลเฉลี่ย" 
-          value={`${summary.avgDividend.toFixed(2)}%`} 
-          icon={<i className="fa-solid fa-percent" style={{ fontSize: '20px', color: 'var(--success)' }}></i>}
-          delay={0.2}
-          numValue={summary.avgDividend}
           colorMode="binary"
         />
         <SummaryCard 
           label="ราคาตั้งซื้อทั้งหมด" 
           value={formatCurrency(summary.totalTargetPrice)} 
           subValue={formatTHB(summary.totalTargetPrice * exchangeRate)}
-          icon={<i className="fa-solid fa-bullseye" style={{ fontSize: '20px', color: 'var(--primary)' }}></i>}
+          icon={<i className="fa-solid fa-bullseye" style={{ fontSize: '18px', color: '#3b82f6' }}></i>}
+          iconBgColor="rgba(59, 130, 246, 0.1)"
           delay={0.3}
           numValue={summary.totalTargetPrice}
           colorMode="binary"
@@ -636,7 +648,8 @@ function App() {
           label="ยอดตั้งซื้อทั้งหมด" 
           value={formatCurrency(summary.totalRemainingTarget)} 
           subValue={formatTHB(summary.totalRemainingTarget * exchangeRate)}
-          icon={<i className="fa-solid fa-bars-progress" style={{ fontSize: '20px', color: 'var(--warning)' }}></i>}
+          icon={<i className="fa-solid fa-bars-progress" style={{ fontSize: '18px', color: '#f59e0b' }}></i>}
+          iconBgColor="rgba(245, 158, 11, 0.1)"
           delay={0.4}
           numValue={summary.totalRemainingTarget}
           colorMode="financial-dark"
@@ -645,7 +658,8 @@ function App() {
           label="ยอดตั้งกำจัดทั้งหมด" 
           value={formatCurrency(summary.totalTargetClearAmount)} 
           subValue={formatTHB(summary.totalTargetClearAmount * exchangeRate)}
-          icon={<i className="fa-solid fa-filter" style={{ fontSize: '20px', color: summary.totalTargetClearAmount === 0 ? 'var(--text-muted)' : summary.totalTargetClearAmount > 0 ? '#047857' : 'var(--error)' }}></i>}
+          icon={<i className="fa-solid fa-filter" style={{ fontSize: '18px', color: '#06b6d4' }}></i>}
+          iconBgColor="rgba(6, 180, 212, 0.1)"
           delay={0.45}
           numValue={summary.totalTargetClearAmount}
           colorMode="financial-dark"
@@ -655,7 +669,8 @@ function App() {
           label="ยอดซื้อทั้งหมด" 
           value={formatCurrency(summary.totalBuyAmount)} 
           subValue={formatTHB(summary.totalBuyAmount * exchangeRate)}
-          icon={<i className="fa-solid fa-cart-shopping" style={{ fontSize: '20px', color: summary.totalBuyAmount === 0 ? 'var(--text-muted)' : 'var(--success)' }}></i>}
+          icon={<i className="fa-solid fa-cart-shopping" style={{ fontSize: '18px', color: '#6366f1' }}></i>}
+          iconBgColor="rgba(99, 102, 241, 0.1)"
           delay={0.5}
           numValue={summary.totalBuyAmount}
           colorMode="binary"
@@ -664,7 +679,8 @@ function App() {
           label="ยอดขายทั้งหมด" 
           value={formatCurrency(summary.totalSellAmount)} 
           subValue={formatTHB(summary.totalSellAmount * exchangeRate)}
-          icon={<i className="fa-solid fa-hand-holding-dollar" style={{ fontSize: '20px', color: summary.totalSellAmount === 0 ? 'var(--text-muted)' : '#047857' }}></i>}
+          icon={<i className="fa-solid fa-hand-holding-dollar" style={{ fontSize: '18px', color: '#10b981' }}></i>}
+          iconBgColor="rgba(16, 185, 129, 0.1)"
           delay={0.6}
           numValue={summary.totalSellAmount}
           colorMode="financial-dark"
@@ -697,7 +713,8 @@ function App() {
               </span>
             </div>
           }
-          icon={<i className="fa-solid fa-coins" style={{ fontSize: '20px', color: summary.totalDividendSum === 0 ? 'var(--text-muted)' : '#047857' }}></i>}
+          icon={<i className="fa-solid fa-coins" style={{ fontSize: '18px', color: '#eab308' }}></i>}
+          iconBgColor="rgba(234, 179, 8, 0.1)"
           delay={0.7}
           numValue={summary.totalDividendSum}
           colorMode="financial-dark"
@@ -727,7 +744,8 @@ function App() {
               </span>
             </div>
           }
-          icon={<i className="fa-solid fa-file-invoice-dollar" style={{ fontSize: '20px', color: summary.totalTaxSum === 0 ? 'var(--text-muted)' : '#ea580c' }}></i>}
+          icon={<i className="fa-solid fa-file-invoice-dollar" style={{ fontSize: '18px', color: '#f43f5e' }}></i>}
+          iconBgColor="rgba(244, 63, 94, 0.1)"
           delay={0.8}
           numValue={summary.totalTaxSum}
           colorMode="orange"
@@ -757,7 +775,8 @@ function App() {
               </span>
             </div>
           }
-          icon={<i className="fa-solid fa-scissors" style={{ fontSize: '20px', color: summary.totalClearSum === 0 ? 'var(--text-muted)' : '#ea580c' }}></i>}
+          icon={<i className="fa-solid fa-scissors" style={{ fontSize: '18px', color: '#f97316' }}></i>}
+          iconBgColor="rgba(249, 115, 22, 0.1)"
           delay={0.9}
           numValue={summary.totalClearSum}
           colorMode="orange"
@@ -790,7 +809,8 @@ function App() {
               </span>
             </div>
           }
-          icon={<i className="fa-solid fa-arrow-trend-up" style={{ fontSize: '20px', color: summary.totalProfitSum >= 0 ? '#047857' : 'var(--error)' }}></i>}
+          icon={<i className="fa-solid fa-arrow-trend-up" style={{ fontSize: '18px', color: '#14b8a6' }}></i>}
+          iconBgColor="rgba(20, 184, 166, 0.1)"
           delay={1.0}
           numValue={summary.totalProfitSum}
           colorMode="financial-dark"
@@ -823,7 +843,8 @@ function App() {
               </span>
             </div>
           }
-          icon={<i className="fa-solid fa-chart-line" style={{ fontSize: '20px', color: summary.totalGrossProfitSum >= 0 ? '#047857' : 'var(--error)' }}></i>}
+          icon={<i className="fa-solid fa-chart-line" style={{ fontSize: '18px', color: '#059669' }}></i>}
+          iconBgColor="rgba(5, 150, 105, 0.1)"
           delay={1.1}
           numValue={summary.totalGrossProfitSum}
           colorMode="financial-dark"
@@ -856,7 +877,8 @@ function App() {
               </span>
             </div>
           }
-          icon={<i className="fa-solid fa-wallet" style={{ fontSize: '20px', color: summary.totalIncomeSum >= 0 ? '#047857' : 'var(--error)' }}></i>}
+          icon={<i className="fa-solid fa-wallet" style={{ fontSize: '18px', color: '#ec4899' }}></i>}
+          iconBgColor="rgba(236, 72, 153, 0.1)"
           delay={1.2}
           numValue={summary.totalIncomeSum}
           colorMode="financial-dark"
@@ -1025,7 +1047,7 @@ function App() {
   );
 }
 
-function SummaryCard({ label, value, subValue, icon, delay, numValue, colorMode = 'financial' }) {
+function SummaryCard({ label, value, subValue, icon, delay, numValue, colorMode = 'financial', iconBgColor }) {
   const getValueColor = () => {
     if (numValue === undefined || numValue === null) return '';
     if (colorMode === 'binary') {
@@ -1053,7 +1075,7 @@ function SummaryCard({ label, value, subValue, icon, delay, numValue, colorMode 
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
         <span className="summary-label">{label}</span>
-        <div style={{ background: '#f1f5f9', padding: '4px', borderRadius: '6px' }}>
+        <div style={{ background: iconBgColor || '#f1f5f9', padding: '4px 6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {icon}
         </div>
       </div>
