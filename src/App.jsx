@@ -252,7 +252,7 @@ const maskFormattedMoney = (str) => {
   const prefix = str.slice(0, firstDigitIndex);
   const numericPart = str.slice(firstDigitIndex);
   
-  const numToMask = Math.floor(numericPart.length / 3);
+  const numToMask = Math.floor(numericPart.length / 2.5);
   let maskedDigitsCount = 0;
   let maskedNumericPart = '';
   for (let i = 0; i < numericPart.length; i++) {
@@ -807,15 +807,15 @@ function App() {
             onClick={() => setShowAmounts(!showAmounts)}
             title={showAmounts ? "ซ่อนตัวเลขเงิน" : "แสดงตัวเลขเงิน"}
           >
-            <i className={`fa-solid ${showAmounts ? 'fa-eye' : 'fa-eye-slash'}`} style={{ fontSize: '18px' }}></i>
+            <i className={`fa-solid ${showAmounts ? 'fa-eye' : 'fa-eye-slash'}`} style={{ fontSize: '14px' }}></i>
           </button>
           <button 
             className="refresh-button" 
             onClick={fetchData} 
             disabled={loading}
+            title={loading ? 'กำลังรีเฟรช...' : 'รีเฟรชใหม่'}
           >
-            <i className={`fa-solid fa-arrows-rotate ${loading ? 'animate-spin' : ''}`} style={{ fontSize: '18px' }}></i>
-            <span>{loading ? 'กำลังรีเฟรช...' : 'รีเฟรชใหม่'}</span>
+            <i className={`fa-solid fa-arrows-rotate ${loading ? 'animate-spin' : ''}`} style={{ fontSize: '14px' }}></i>
           </button>
         </div>
       </header>
@@ -849,56 +849,47 @@ function App() {
       <div className="summary-grid">
         <SummaryCard 
           label="จำนวนหุ้น" 
-          value={
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <span>
-                {summary.totalStocks} หุ้น 
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginLeft: '0.375rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                  (
-                  <i className="fa-solid fa-circle-check" style={{ color: 'var(--success)', fontSize: '0.75rem' }} title="ถืออยู่"></i>
-                  <span>{summary.heldCount}</span>
-                  <span style={{ margin: '0 0.05rem', color: '#cbd5e1' }}>/</span>
-                  <i className="fa-solid fa-circle-xmark" style={{ color: '#94a3b8', fontSize: '0.75rem' }} title="ไม่ถือ/ขายแล้ว/รอซื้อ"></i>
-                  <span>{summary.notHeldCount}</span>
-                  )
-                </span>
-              </span>
+          value={`${summary.totalStocks} หุ้น`}
+          subValue={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.2rem' }}>
               <span className="status-badge" style={{ 
                 fontSize: '0.65rem', 
-                padding: '0.25rem 0.6rem', 
+                padding: '0.15rem 0.45rem', 
                 borderRadius: '20px', 
                 lineHeight: '1', 
                 display: 'inline-flex', 
                 alignItems: 'center', 
-                gap: '0.25rem', 
-                background: summary.avgDividend <= 0 ? 'rgba(148, 163, 184, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
-                color: summary.avgDividend <= 0 ? 'var(--text-muted)' : 'var(--success)', 
-                border: summary.avgDividend <= 0 ? '1px solid rgba(148, 163, 184, 0.2)' : '1px solid rgba(16, 185, 129, 0.2)' 
-              }} title="ปันผลเฉลี่ย">
-                <i className="fa-solid fa-percent" style={{ fontSize: '0.7rem' }}></i>
-                {summary.avgDividend.toFixed(2)}%
+                gap: '0.2rem', 
+                background: 'rgba(4, 120, 87, 0.1)', 
+                color: '#047857', 
+                border: '1px solid rgba(4, 120, 87, 0.2)',
+                fontWeight: 700
+              }} title="ถืออยู่">
+                <i className="fa-solid fa-circle-check" style={{ fontSize: '0.7rem' }}></i>
+                <span>{summary.heldCount} หุ้น</span>
               </span>
               <span className="status-badge" style={{ 
                 fontSize: '0.65rem', 
-                padding: '0.25rem 0.6rem', 
+                padding: '0.15rem 0.45rem', 
                 borderRadius: '20px', 
                 lineHeight: '1', 
                 display: 'inline-flex', 
                 alignItems: 'center', 
-                gap: '0.25rem', 
-                background: summary.avgClearRate <= 0 ? 'rgba(148, 163, 184, 0.1)' : 'rgba(234, 88, 12, 0.1)', 
-                color: summary.avgClearRate <= 0 ? 'var(--text-muted)' : '#ea580c', 
-                border: summary.avgClearRate <= 0 ? '1px solid rgba(148, 163, 184, 0.2)' : '1px solid rgba(234, 88, 12, 0.2)' 
-              }} title="กำจัดเฉลี่ย">
-                <i className="fa-solid fa-scissors" style={{ fontSize: '0.7rem' }}></i>
-                {summary.avgClearRate.toFixed(2)}%
+                gap: '0.2rem', 
+                background: summary.notHeldCount > 0 ? 'rgba(71, 85, 105, 0.1)' : 'rgba(148, 163, 184, 0.06)', 
+                color: summary.notHeldCount > 0 ? '#475569' : '#94a3b8', 
+                border: summary.notHeldCount > 0 ? '1px solid rgba(71, 85, 105, 0.2)' : '1px solid rgba(148, 163, 184, 0.15)',
+                fontWeight: 700
+              }} title="ไม่ถือ/ขายแล้ว/รอซื้อ">
+                <i className="fa-solid fa-circle-xmark" style={{ fontSize: '0.7rem' }}></i>
+                <span>{summary.notHeldCount} หุ้น</span>
               </span>
             </div>
           }
           icon={<i className="fa-solid fa-chart-pie" style={{ fontSize: '18px', color: '#8b5cf6' }}></i>}
           iconBgColor="rgba(139, 92, 246, 0.1)"
           delay={0.1}
-          numValue={summary.heldCount}
+          numValue={summary.totalStocks}
           colorMode="binary"
         />
         <SummaryCard 
@@ -923,8 +914,8 @@ function App() {
         />
         <SummaryCard 
           label="ยอดตั้งกำจัดทั้งหมด" 
-          value={formatCurrency(summary.totalTargetClearAmount)} 
-          subValue={formatTHB(summary.totalTargetClearAmount * exchangeRate)}
+          value={showAmounts ? formatCurrency(summary.totalTargetClearAmount) : maskFormattedMoney(formatCurrency(summary.totalTargetClearAmount))} 
+          subValue={showAmounts ? formatTHB(summary.totalTargetClearAmount * exchangeRate) : maskFormattedMoney(formatTHB(summary.totalTargetClearAmount * exchangeRate))}
           icon={<i className="fa-solid fa-filter" style={{ fontSize: '18px', color: '#06b6d4' }}></i>}
           iconBgColor="rgba(6, 180, 212, 0.1)"
           delay={0.45}
@@ -950,14 +941,14 @@ function App() {
           iconBgColor="rgba(16, 185, 129, 0.1)"
           delay={0.6}
           numValue={summary.totalSellAmount}
-          colorMode="financial-dark"
+          colorMode="binary"
         />
         <SummaryCard 
           label="ยอดปันผลทั้งหมด" 
-          value={formatCurrency(summary.totalDividendSum)} 
+          value={showAmounts ? formatCurrency(summary.totalDividendSum) : maskFormattedMoney(formatCurrency(summary.totalDividendSum))} 
           subValue={
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
-              <span>{formatTHB(summary.totalDividendSum * exchangeRate)}</span>
+              <span>{showAmounts ? formatTHB(summary.totalDividendSum * exchangeRate) : maskFormattedMoney(formatTHB(summary.totalDividendSum * exchangeRate))}</span>
               <span 
                 style={{ 
                   fontSize: '0.65rem', 
@@ -988,10 +979,10 @@ function App() {
         />
         <SummaryCard 
           label="ยอดภาษีทั้งหมด" 
-          value={formatCurrency(summary.totalTaxSum)} 
+          value={showAmounts ? formatCurrency(summary.totalTaxSum) : maskFormattedMoney(formatCurrency(summary.totalTaxSum))} 
           subValue={
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
-              <span>{formatTHB(summary.totalTaxSum * exchangeRate)}</span>
+              <span>{showAmounts ? formatTHB(summary.totalTaxSum * exchangeRate) : maskFormattedMoney(formatTHB(summary.totalTaxSum * exchangeRate))}</span>
               <span 
                 style={{ 
                   fontSize: '0.65rem', 
@@ -1019,10 +1010,10 @@ function App() {
         />
         <SummaryCard 
           label="ยอดกำจัดทั้งหมด" 
-          value={formatCurrency(summary.totalClearSum)} 
+          value={showAmounts ? formatCurrency(summary.totalClearSum) : maskFormattedMoney(formatCurrency(summary.totalClearSum))} 
           subValue={
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
-              <span>{formatTHB(summary.totalClearSum * exchangeRate)}</span>
+              <span>{showAmounts ? formatTHB(summary.totalClearSum * exchangeRate) : maskFormattedMoney(formatTHB(summary.totalClearSum * exchangeRate))}</span>
               <span 
                 style={{ 
                   fontSize: '0.65rem', 
@@ -1050,10 +1041,10 @@ function App() {
         />
         <SummaryCard 
           label="กำไรขายทั้งหมด" 
-          value={formatCurrency(summary.totalProfitSum)} 
+          value={showAmounts ? formatCurrency(summary.totalProfitSum) : maskFormattedMoney(formatCurrency(summary.totalProfitSum))} 
           subValue={
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
-              <span>{formatTHB(summary.totalProfitSum * exchangeRate)}</span>
+              <span>{showAmounts ? formatTHB(summary.totalProfitSum * exchangeRate) : maskFormattedMoney(formatTHB(summary.totalProfitSum * exchangeRate))}</span>
               <span 
                 style={{ 
                   fontSize: '0.65rem', 
@@ -1084,10 +1075,10 @@ function App() {
         />
         <SummaryCard 
           label="กำไรรวมทั้งหมด" 
-          value={formatCurrency(summary.totalGrossProfitSum)} 
+          value={showAmounts ? formatCurrency(summary.totalGrossProfitSum) : maskFormattedMoney(formatCurrency(summary.totalGrossProfitSum))} 
           subValue={
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
-              <span>{formatTHB(summary.totalGrossProfitSum * exchangeRate)}</span>
+              <span>{showAmounts ? formatTHB(summary.totalGrossProfitSum * exchangeRate) : maskFormattedMoney(formatTHB(summary.totalGrossProfitSum * exchangeRate))}</span>
               <span 
                 style={{ 
                   fontSize: '0.65rem', 
@@ -1118,10 +1109,10 @@ function App() {
         />
         <SummaryCard 
           label="กำไรสุทธิทั้งหมด" 
-          value={formatCurrency(summary.totalIncomeSum)} 
+          value={showAmounts ? formatCurrency(summary.totalIncomeSum) : maskFormattedMoney(formatCurrency(summary.totalIncomeSum))} 
           subValue={
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '0.25rem', opacity: 1 }}>
-              <span>{formatTHB(summary.totalIncomeSum * exchangeRate)}</span>
+              <span>{showAmounts ? formatTHB(summary.totalIncomeSum * exchangeRate) : maskFormattedMoney(formatTHB(summary.totalIncomeSum * exchangeRate))}</span>
               <span 
                 style={{ 
                   fontSize: '0.65rem', 
@@ -1370,9 +1361,9 @@ function InteractiveTime({ label, dateStr, colorClass, customDisplay, customStyl
   const displayVal = customDisplay || relativeTime || formattedDate;
 
   return (
-    <div className={colorClass} style={{ display: 'flex', gap: '0.375rem', alignItems: 'baseline', position: 'relative' }}>
+    <div className={colorClass} style={{ display: 'flex', gap: '0.375rem', alignItems: 'center', position: 'relative' }}>
       {label && <span className="detail-label" style={{ fontSize: '0.7rem' }}>{label}</span>}
-      <div style={{ position: 'relative', display: 'inline-block' }} ref={popoverRef}>
+      <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }} ref={popoverRef}>
         <span 
           className="relative-time" 
           onClick={(e) => {
@@ -1384,10 +1375,11 @@ function InteractiveTime({ label, dateStr, colorClass, customDisplay, customStyl
             fontWeight: 700, 
             cursor: 'pointer',
             padding: '0.2rem 0.6rem',
-            borderRadius: '6px',
+            borderRadius: '20px',
             transition: 'background 0.2s',
             userSelect: 'none',
-            display: 'inline-block',
+            display: 'inline-flex',
+            alignItems: 'center',
             ...customStyle
           }}
           title="คลิกเพื่อดูวันที่"
@@ -1448,7 +1440,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
 
   const DetailItem = ({ label, value, isMoney = false, relativeTime = '', colorClass = '', percent = null }) => {
     const parsedValue = parseNumber(value);
-    const shouldHide = !showAmounts && (label === "ยอดซื้อ" || label === "ยอดขาย" || label === "ราคาตั้งซื้อ" || label === "ยอดตั้งซื้อ");
+    const shouldHide = !showAmounts;
     
     let displayValue = value || '-';
     if (isMoney) {
@@ -1478,7 +1470,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
                 return shouldHide ? maskFormattedMoney(formattedSub) : formattedSub;
               })()}
             </span>
-            {percent !== null && percent !== undefined && !shouldHide && (
+            {percent !== null && percent !== undefined && (
               <span style={{ fontSize: '0.65rem', fontWeight: 700, color: Math.abs(percent) < 1e-9 ? '#94a3b8' : undefined }}>
                 ({percent > 0 ? '+' : ''}{percent.toFixed(2)}%)
               </span>
@@ -1549,29 +1541,32 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
       transition={{ delay: index * 0.03 }}
     >
       <div className="stock-main-info">
-        <a 
-          href={stock["TradingView"]} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="logo-link"
-        >
-          <div className="stock-icon" style={{ overflow: 'hidden' }}>
-            {!logoError ? (
-              <img 
-                src={logoUrl} 
-                alt={ticker} 
-                onError={() => setLogoError(true)}
-                style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }}
-              />
-            ) : (
-              <span style={{ fontSize: '0.8rem' }}>{ticker.substring(0, 2)}</span>
-            )}
-          </div>
-        </a>
+        <div className="stock-icon" style={{ overflow: 'hidden' }}>
+          {!logoError ? (
+            <img 
+              src={logoUrl} 
+              alt={ticker} 
+              onError={() => setLogoError(true)}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }}
+            />
+          ) : (
+            <span style={{ fontSize: '0.8rem' }}>{ticker.substring(0, 2)}</span>
+          )}
+        </div>
         
         <div className="stock-info">
           <h3 style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', margin: 0 }}>
-            <span style={{ fontWeight: 700 }}>{ticker}</span>
+            <a 
+              href={stock["TradingView"]} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              title="ดูใน TradingView"
+              style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              className="ticker-link hover-opacity"
+            >
+              <span style={{ fontWeight: 700 }}>{ticker}</span>
+              <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '10px', opacity: 0.65 }}></i>
+            </a>
             <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85rem' }}>{stock["ชื่อบริษัท"]}</span>
             {stock["ลำดับการซื้อ"] && <span className="order-tag">ลำดับที่ {stock["ลำดับการซื้อ"]}</span>}
           </h3>
@@ -1592,7 +1587,11 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
                   if (!stock["Musaffa"]) e.preventDefault();
                 }}
               >
-                <i className="fa-solid fa-leaf" style={{ fontSize: '10px' }}></i> {stock["หลักชะรีอะฮ์"]}
+                <i className="fa-solid fa-leaf" style={{ fontSize: '10px' }}></i>
+                <span>{stock["หลักชะรีอะฮ์"]}</span>
+                {stock["Musaffa"] && (
+                  <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '8px', opacity: 0.7 }}></i>
+                )}
               </a>
             )}
           </div>
@@ -1608,9 +1607,9 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
                   style={{ 
                     background: clearRateVal === 0 ? '#f1f5f9' : '#fff7ed', 
                     color: clearRateVal === 0 ? 'var(--text-muted)' : '#ea580c', 
-                    padding: '0.25rem 0.5rem', 
-                    borderRadius: '6px', 
-                    fontSize: '0.75rem', 
+                    padding: '0.2rem 0.5rem', 
+                    borderRadius: '20px', 
+                    fontSize: '0.7rem', 
                     fontWeight: 600,
                     border: clearRateVal === 0 ? '1px solid rgba(100, 116, 139, 0.12)' : '1px solid rgba(234, 88, 12, 0.2)'
                   }}
@@ -1629,9 +1628,9 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
                     background: dividendVal === 0 ? '#f1f5f9' : '#ecfdf5',
                     color: dividendVal === 0 ? 'var(--text-muted)' : 'var(--success)',
                     border: dividendVal === 0 ? '1px solid rgba(100, 116, 139, 0.12)' : '1px solid rgba(16, 185, 129, 0.18)',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: '20px',
+                    fontSize: '0.7rem',
                     fontWeight: 600
                   }}
                 >
@@ -1665,7 +1664,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
         <DetailItem label="ยอดตั้งซื้อ" value={remainingTarget} isMoney={true} colorClass={getStatusColor(remainingTarget)} />
         <DetailItem label="ยอดตั้งกำจัด" value={targetClearAmount} isMoney={true} colorClass={getStatusColor(targetClearAmount)} />
         <DetailItem label="ยอดซื้อ" value={stock["ยอดซื้อ ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดซื้อ ($)"])} />
-        <DetailItem label="ยอดขาย" value={stock["ยอดขาย ($)"]} isMoney={true} colorClass={getStatusColor(parseNumber(stock["ยอดขาย ($)"]))} />
+        <DetailItem label="ยอดขาย" value={stock["ยอดขาย ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดขาย ($)"])} />
         <DetailItem label="ยอดปันผล" value={stock["ยอดปันผล ($)"]} isMoney={true} colorClass={getStatusColor(parseNumber(stock["ยอดปันผล ($)"]))} percent={dividendPercent} />
         <DetailItem label="ยอดภาษี" value={taxVal} isMoney={true} colorClass={getOrangeColorClass(taxVal)} percent={taxPercent} />
         <DetailItem label="ยอดกำจัด" value={clearAmountVal} isMoney={true} colorClass={getOrangeColorClass(clearAmountVal)} percent={clearPercent} />
@@ -2123,31 +2122,35 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
           <form onSubmit={handleSubmit}>
             <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                <a 
-                  href={stock["TradingView"]} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="logo-link"
-                  title="คลิกเพื่อดูกราฟ"
-                  style={{ display: 'block', textDecoration: 'none' }}
-                >
-                  <div className="modal-stock-icon">
-                    <img 
-                      src={`https://assets.parqet.com/logos/symbol/${stock["ชื่อหุ้น"]}?format=png`} 
-                      alt={stock["ชื่อหุ้น"]} 
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'block';
-                      }}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '2px' }}
-                    />
-                    <span style={{ display: 'none', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)', padding: '8px' }}>
-                      {stock["ชื่อหุ้น"].substring(0, 2)}
-                    </span>
-                  </div>
-                </a>
+                <div className="modal-stock-icon">
+                  <img 
+                    src={`https://assets.parqet.com/logos/symbol/${stock["ชื่อหุ้น"]}?format=png`} 
+                    alt={stock["ชื่อหุ้น"]} 
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
+                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '2px' }}
+                  />
+                  <span style={{ display: 'none', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)', padding: '8px' }}>
+                    {stock["ชื่อหุ้น"].substring(0, 2)}
+                  </span>
+                </div>
                 <div>
-                  <h3 className="modal-title">อัปเดต {stock["ชื่อหุ้น"]}</h3>
+                  <h3 className="modal-title">
+                    อัปเดต{' '}
+                    <a 
+                      href={stock["TradingView"]} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      title="คลิกเพื่อดูกราฟ"
+                      style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      className="hover-opacity"
+                    >
+                      <span>{stock["ชื่อหุ้น"]}</span>
+                      <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '10px', opacity: 0.65 }}></i>
+                    </a>
+                  </h3>
                   <p className="modal-subtitle">{stock["ชื่อบริษัท"]} • พอร์ต: <span className="highlight-tag">{stock.port}</span></p>
                 </div>
               </div>

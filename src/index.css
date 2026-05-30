@@ -540,7 +540,7 @@ h1 {
   color: #475569;
   border: 1px solid rgba(71, 85, 105, 0.12);
   padding: 0.2rem 0.5rem;
-  border-radius: 4px;
+  border-radius: 20px;
   font-size: 0.7rem;
   font-weight: 600;
 }
@@ -578,9 +578,9 @@ h1 {
 .dividend-tag {
   background: #ecfdf5;
   color: var(--success);
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
   font-weight: 600;
 }
 
@@ -594,15 +594,15 @@ h1 {
   color: var(--text-muted);
   border: 1px solid rgba(100, 116, 139, 0.12);
   padding: 0.2rem 0.5rem;
-  border-radius: 4px;
+  border-radius: 20px;
   font-size: 0.7rem;
   font-weight: 600;
 }
 
 .market-tag-nyse {
-  background: #fee2e2;
-  color: #dc2626;
-  border: 1px solid rgba(220, 38, 38, 0.15);
+  background: #fdf2f8;
+  color: #db2777;
+  border: 1px solid rgba(219, 39, 119, 0.15);
 }
 
 .market-tag-nasdaq {
@@ -616,7 +616,7 @@ h1 {
   color: var(--text-muted);
   border: 1px solid rgba(100, 116, 139, 0.12);
   padding: 0.2rem 0.5rem;
-  border-radius: 4px;
+  border-radius: 20px;
   font-size: 0.7rem;
   font-weight: 600;
   text-decoration: none;
@@ -658,28 +658,34 @@ h1 {
 .refresh-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1rem;
-  border-radius: 0.75rem;
+  justify-content: center;
+  padding: 0.45rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 0.5rem;
   border: 1px solid var(--surface-border);
   background: white;
   color: var(--text-main);
-  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .refresh-button:hover {
   background: #f1f5f9;
+  color: var(--primary);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.refresh-button:active {
+  transform: scale(0.95);
 }
 
 .eye-toggle-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.625rem;
+  padding: 0.45rem;
   aspect-ratio: 1 / 1;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--surface-border);
   background: white;
   color: var(--text-main);
@@ -1124,7 +1130,7 @@ h1 {
 /* Status Badges */
 .status-badge {
   padding: 0.2rem 0.6rem;
-  border-radius: 6px;
+  border-radius: 20px;
   font-size: 0.7rem;
   font-weight: 700;
   display: inline-flex;
@@ -1157,9 +1163,9 @@ h1 {
 }
 
 .status-badge-wait-buy {
-  background: #fff7ed;
-  color: #ea580c;
-  border: 1px solid rgba(234, 88, 12, 0.2);
+  background: #faf5ff;
+  color: #9333ea;
+  border: 1px solid rgba(147, 51, 234, 0.2);
 }
 
 .status-badge-list {
@@ -1599,4 +1605,12 @@ h1 {
     flex-grow: 1;
     max-width: none;
   }
+}
+
+.hover-opacity {
+  transition: opacity 0.2s ease;
+}
+
+.hover-opacity:hover {
+  opacity: 0.6;
 }
