@@ -755,7 +755,7 @@ h1 {
 .modal-content {
   width: 100%;
   max-width: 900px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.5) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.90) 0%, rgba(255, 255, 255, 0.60) 100%);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.5);
@@ -1531,27 +1531,11 @@ h1 {
   white-space: nowrap;
 }
 
-.sort-select {
-  border: none;
-  background: transparent;
-  color: var(--text-main);
-  font-size: 0.85rem;
-  font-weight: 700;
-  outline: none;
-  cursor: pointer;
-  padding: 0 1.75rem 0 0.25rem;
-  border-radius: 0.5rem;
-  transition: background 0.2s ease;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
-  background-repeat: no-repeat;
-  background-position: right 6px center;
-  font-family: inherit;
+.sort-select-container {
+  flex: 1 1 auto;
+  min-width: 110px;
+  max-width: 150px;
   height: 100%;
-}
-
-.sort-select:hover {
-  background-color: rgba(100, 116, 139, 0.05);
 }
 
 .sort-toggle-btn {
@@ -1587,8 +1571,8 @@ h1 {
     max-width: 100%;
     justify-content: space-between;
   }
-  .sort-select {
+  .sort-select-container {
     flex-grow: 1;
-    text-align: right;
+    max-width: none;
   }
 }

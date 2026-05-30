@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import Select from 'react-select';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbwkjycorGKU-NDKVxETVhEC_BiKHhSuuUhMX4uZhDTIYi5KuoPjtIu5FzwE3Ahhc1HZ/exec';
 const UPDATE_API_URL = 'https://script.google.com/macros/s/AKfycbzNnoWQyuqBNn2y1kNq3ecRc8bTx_DeU5GmCCgF7y5ER3TOFZmiTWXnr_unNg6unYzS/exec';
@@ -243,6 +244,211 @@ const formatTHB = (val) => {
   return isNegative ? `≈ -฿${formatted}` : `≈ ฿${formatted}`;
 };
 
+const sortOptions = [
+  { value: "ลำดับที่", label: "ลำดับที่" },
+  { value: "มูลค่าตลาด", label: "มูลค่าตลาด" },
+  { value: "ราคาหุ้น", label: "ราคาหุ้น" },
+  { value: "ปันผล", label: "ปันผล" },
+  { value: "ราคาตั้งซื้อ", label: "ราคาตั้งซื้อ" },
+  { value: "ยอดตั้งซื้อ", label: "ยอดตั้งซื้อ" },
+  { value: "ยอดซื้อ", label: "ยอดซื้อ" },
+  { value: "ยอดขาย", label: "ยอดขาย" },
+  { value: "ยอดกำไร", label: "ยอดกำไร" },
+  { value: "ยอดปันผล", label: "ยอดปันผล" },
+  { value: "ยอดภาษี", label: "ยอดภาษี" },
+  { value: "กำไรสุทธิ", label: "กำไรสุทธิ" },
+  { value: "ซื้อล่าสุด", label: "ซื้อล่าสุด" },
+  { value: "ขายล่าสุด", label: "ขายล่าสุด" },
+  { value: "อายุการถือ", label: "อายุการถือ" }
+];
+
+const statusOptions = [
+  { value: "ซื้อแล้ว", label: "ซื้อแล้ว" },
+  { value: "ขายแล้ว", label: "ขายแล้ว" },
+  { value: "รอขาย", label: "รอขาย" },
+  { value: "ขายบางส่วน", label: "ขายบางส่วน" },
+  { value: "รอซื้อ", label: "รอซื้อ" }
+];
+
+const sortSelectStyles = {
+  control: (provided, state) => ({
+    ...provided,
+    backgroundColor: 'transparent',
+    border: 'none',
+    boxShadow: 'none',
+    minHeight: 'auto',
+    height: '100%',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    fontSize: '0.85rem',
+    fontWeight: '700',
+    color: 'var(--text-main)',
+    display: 'flex',
+    alignItems: 'center',
+    width: '100%',
+    minWidth: '100px',
+  }),
+  valueContainer: (provided) => ({
+    ...provided,
+    padding: '0 4px',
+    color: 'var(--text-main)',
+  }),
+  singleValue: (provided) => ({
+    ...provided,
+    color: 'var(--text-main)',
+    margin: 0,
+  }),
+  indicatorsContainer: (provided) => ({
+    ...provided,
+    height: '100%',
+  }),
+  dropdownIndicator: (provided, state) => ({
+    ...provided,
+    color: 'var(--text-muted)',
+    padding: '2px',
+    '&:hover': {
+      color: 'var(--text-main)',
+    },
+    transform: state.isFocused ? 'rotate(180deg)' : 'none',
+    transition: 'transform 0.2s ease',
+  }),
+  indicatorSeparator: () => ({
+    display: 'none',
+  }),
+  menu: (provided) => ({
+    ...provided,
+    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%)',
+    backdropFilter: 'blur(24px)',
+    border: '1px solid rgba(255, 255, 255, 0.5)',
+    borderRadius: '0.75rem',
+    boxShadow: '0 10px 30px -10px rgba(31, 38, 135, 0.15)',
+    zIndex: 9999,
+  }),
+  menuPortal: (provided) => ({
+    ...provided,
+    zIndex: 9999,
+  }),
+  option: (provided, state) => ({
+    ...provided,
+    backgroundColor: state.isSelected 
+      ? 'var(--primary)' 
+      : state.isFocused 
+        ? 'rgba(99, 102, 241, 0.08)' 
+        : 'transparent',
+    color: state.isSelected ? '#ffffff' : 'var(--text-main)',
+    fontWeight: state.isSelected ? '700' : '600',
+    fontSize: '0.85rem',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    padding: '6px 12px',
+    '&:active': {
+      backgroundColor: state.isSelected ? 'var(--primary)' : 'rgba(99, 102, 241, 0.15)',
+    }
+  }),
+  input: (provided) => ({
+    ...provided,
+    color: 'var(--text-main)',
+    margin: 0,
+    padding: 0,
+  }),
+};
+
+const statusSelectStyles = {
+  control: (provided, state) => ({
+    ...provided,
+    width: '100%',
+    padding: '0.125rem 0.375rem',
+    borderRadius: '0.75rem',
+    border: state.isFocused 
+      ? '1px solid var(--primary)' 
+      : '1px solid rgba(255, 255, 255, 0.8)',
+    borderBottomColor: state.isFocused 
+      ? 'var(--primary)' 
+      : 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: state.isFocused 
+      ? 'rgba(255, 255, 255, 0.85)' 
+      : 'rgba(255, 255, 255, 0.5)',
+    backdropFilter: 'blur(8px)',
+    color: 'var(--text-main)',
+    fontSize: '0.875rem',
+    fontFamily: 'inherit',
+    fontWeight: '600',
+    boxShadow: state.isFocused 
+      ? '0 0 0 3px rgba(99, 102, 241, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.9)' 
+      : 'inset 0 1px 2px rgba(255,255,255,0.4)',
+    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+    cursor: 'pointer',
+    '&:hover': {
+      borderColor: state.isFocused ? 'var(--primary)' : 'rgba(255, 255, 255, 0.9)',
+    }
+  }),
+  valueContainer: (provided) => ({
+    ...provided,
+    padding: '0 8px',
+  }),
+  singleValue: (provided) => ({
+    ...provided,
+    color: 'var(--text-main)',
+  }),
+  placeholder: (provided) => ({
+    ...provided,
+    color: '#94a3b8',
+  }),
+  dropdownIndicator: (provided, state) => ({
+    ...provided,
+    color: 'var(--text-muted)',
+    transform: state.isFocused ? 'rotate(180deg)' : 'none',
+    transition: 'transform 0.2s ease',
+    '&:hover': {
+      color: 'var(--text-main)',
+    }
+  }),
+  clearIndicator: (provided) => ({
+    ...provided,
+    color: 'var(--text-muted)',
+    '&:hover': {
+      color: 'var(--error)',
+    }
+  }),
+  indicatorSeparator: () => ({
+    display: 'none',
+  }),
+  menu: (provided) => ({
+    ...provided,
+    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%)',
+    backdropFilter: 'blur(24px)',
+    border: '1px solid rgba(255, 255, 255, 0.5)',
+    borderRadius: '0.75rem',
+    boxShadow: '0 10px 30px -10px rgba(31, 38, 135, 0.15)',
+    zIndex: 9999,
+  }),
+  menuPortal: (provided) => ({
+    ...provided,
+    zIndex: 9999,
+  }),
+  option: (provided, state) => ({
+    ...provided,
+    backgroundColor: state.isSelected 
+      ? 'var(--primary)' 
+      : state.isFocused 
+        ? 'rgba(99, 102, 241, 0.08)' 
+        : 'transparent',
+    color: state.isSelected ? '#ffffff' : 'var(--text-main)',
+    fontWeight: state.isSelected ? '700' : '600',
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    padding: '8px 12px',
+    '&:active': {
+      backgroundColor: state.isSelected ? 'var(--primary)' : 'rgba(99, 102, 241, 0.15)',
+    }
+  }),
+  input: (provided) => ({
+    ...provided,
+    color: 'var(--text-main)',
+  }),
+};
+
 function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -397,11 +603,15 @@ function App() {
     ).length;
     
     const notHeldCount = mainTabData.filter(item => 
-      ['ขายแล้ว', 'รอซื้อ', 'ลิสต์'].includes(item["สถานะ"])
+      ['ขายแล้ว', 'รอซื้อ'].includes(item["สถานะ"])
     ).length;
 
     const avgDividend = mainTabData.length > 0 
       ? mainTabData.reduce((acc, item) => acc + parseNumber(item["อัตราปันผล (%)"]), 0) / mainTabData.length 
+      : 0;
+    
+    const avgClearRate = mainTabData.length > 0 
+      ? mainTabData.reduce((acc, item) => acc + (parseFloat(item["อัตรากำจัด (%)"]) || parseFloat(item["clear_rate"]) || 0), 0) / mainTabData.length 
       : 0;
     
     // Sums for the new requested cards
@@ -494,6 +704,7 @@ function App() {
       heldCount,
       notHeldCount,
       avgDividend,
+      avgClearRate,
       totalTargetPrice,
       totalBuyAmount,
       totalSellAmount,
@@ -625,6 +836,21 @@ function App() {
               }} title="ปันผลเฉลี่ย">
                 <i className="fa-solid fa-percent" style={{ fontSize: '0.7rem' }}></i>
                 {summary.avgDividend.toFixed(2)}%
+              </span>
+              <span className="status-badge" style={{ 
+                fontSize: '0.65rem', 
+                padding: '0.25rem 0.6rem', 
+                borderRadius: '20px', 
+                lineHeight: '1', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.25rem', 
+                background: summary.avgClearRate <= 0 ? 'rgba(148, 163, 184, 0.1)' : 'rgba(234, 88, 12, 0.1)', 
+                color: summary.avgClearRate <= 0 ? 'var(--text-muted)' : '#ea580c', 
+                border: summary.avgClearRate <= 0 ? '1px solid rgba(148, 163, 184, 0.2)' : '1px solid rgba(234, 88, 12, 0.2)' 
+              }} title="กำจัดเฉลี่ย">
+                <i className="fa-solid fa-scissors" style={{ fontSize: '0.7rem' }}></i>
+                {summary.avgClearRate.toFixed(2)}%
               </span>
             </div>
           }
@@ -948,27 +1174,16 @@ function App() {
 
           <div className="sort-container">
             <span className="sort-label">เรียงตาม</span>
-            <select 
-              className="sort-select"
-              value={sortBy}
-              onChange={(e) => handleSortChange(e.target.value)}
-            >
-              <option value="ลำดับที่">ลำดับที่</option>
-              <option value="มูลค่าตลาด">มูลค่าตลาด</option>
-              <option value="ราคาหุ้น">ราคาหุ้น</option>
-              <option value="ปันผล">ปันผล</option>
-              <option value="ราคาตั้งซื้อ">ราคาตั้งซื้อ</option>
-              <option value="ยอดตั้งซื้อ">ยอดตั้งซื้อ</option>
-              <option value="ยอดซื้อ">ยอดซื้อ</option>
-              <option value="ยอดขาย">ยอดขาย</option>
-              <option value="ยอดกำไร">ยอดกำไร</option>
-              <option value="ยอดปันผล">ยอดปันผล</option>
-              <option value="ยอดภาษี">ยอดภาษี</option>
-              <option value="กำไรสุทธิ">กำไรสุทธิ</option>
-              <option value="ซื้อล่าสุด">ซื้อล่าสุด</option>
-              <option value="ขายล่าสุด">ขายล่าสุด</option>
-              <option value="อายุการถือ">อายุการถือ</option>
-            </select>
+            <Select
+              options={sortOptions}
+              value={sortOptions.find(opt => opt.value === sortBy)}
+              onChange={(selected) => handleSortChange(selected ? selected.value : '')}
+              className="sort-select-container"
+              classNamePrefix="react-select"
+              styles={sortSelectStyles}
+              isSearchable={false}
+              menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+            />
             <button 
               type="button"
               className="sort-toggle-btn"
@@ -1419,8 +1634,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
                 stock["สถานะ"] === 'ขายแล้ว' ? 'status-badge-sold' :
                 stock["สถานะ"] === 'รอขาย' ? 'status-badge-wait-sell' :
                 stock["สถานะ"] === 'ขายบางส่วน' ? 'status-badge-partial' : 
-                stock["สถานะ"] === 'รอซื้อ' ? 'status-badge-wait-buy' :
-                stock["สถานะ"] === 'ลิสต์' ? 'status-badge-list' : 'status-badge-other'
+                stock["สถานะ"] === 'รอซื้อ' ? 'status-badge-wait-buy' : 'status-badge-other'
               }`}>
                 {stock["สถานะ"]}
               </span>
@@ -1939,19 +2153,16 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
               <div className="form-grid-container">
                 <div className="form-group">
                   <label className="form-label">สถานะ</label>
-                  <select 
-                    className="form-input" 
-                    value={stockStatus} 
-                    onChange={(e) => setStockStatus(e.target.value)}
-                  >
-                    <option value="">-- เลือกสถานะ --</option>
-                    <option value="ซื้อแล้ว">ซื้อแล้ว</option>
-                    <option value="ขายแล้ว">ขายแล้ว</option>
-                    <option value="รอขาย">รอขาย</option>
-                    <option value="ขายบางส่วน">ขายบางส่วน</option>
-                    <option value="รอซื้อ">รอซื้อ</option>
-                    <option value="ลิสต์">ลิสต์</option>
-                  </select>
+                  <Select
+                    options={statusOptions}
+                    value={statusOptions.find(opt => opt.value === stockStatus) || null}
+                    onChange={(selected) => setStockStatus(selected ? selected.value : '')}
+                    placeholder="-- เลือกสถานะ --"
+                    classNamePrefix="react-select"
+                    styles={statusSelectStyles}
+                    isSearchable={false}
+                    menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                  />
                   <span className="input-helper-text">ค่าเดิม: {stock["สถานะ"] || 'ไม่มี'}</span>
                 </div>
 
