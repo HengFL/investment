@@ -673,6 +673,30 @@ h1 {
   background: #f1f5f9;
 }
 
+.eye-toggle-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 0.75rem;
+  border: 1px solid var(--surface-border);
+  background: white;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.eye-toggle-button:hover {
+  background: #f1f5f9;
+  color: var(--primary);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.eye-toggle-button:active {
+  transform: scale(0.95);
+}
+
 /* Animations */
 @keyframes spin {
   from { transform: rotate(0deg); }

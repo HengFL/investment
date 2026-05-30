@@ -244,6 +244,30 @@ const formatTHB = (val) => {
   return isNegative ? `≈ -฿${formatted}` : `≈ ฿${formatted}`;
 };
 
+const maskFormattedMoney = (str) => {
+  if (!str) return '';
+  const firstDigitIndex = str.search(/\d/);
+  if (firstDigitIndex === -1) return str;
+  
+  const prefix = str.slice(0, firstDigitIndex);
+  const numericPart = str.slice(firstDigitIndex);
+  
+  const numToMask = Math.floor(numericPart.length / 3);
+  let maskedDigitsCount = 0;
+  let maskedNumericPart = '';
+  for (let i = 0; i < numericPart.length; i++) {
+    const char = numericPart[i];
+    if (/\d/.test(char) && maskedDigitsCount < numToMask) {
+      maskedNumericPart += '*';
+      maskedDigitsCount++;
+    } else {
+      maskedNumericPart += char;
+    }
+  }
+  
+  return prefix + maskedNumericPart;
+};
+
 const sortOptions = [
   { value: "ลำดับที่", label: "ลำดับที่" },
   { value: "มูลค่าตลาด", label: "มูลค่าตลาด" },
@@ -455,6 +479,14 @@ function App() {
   const [error, setError] = useState(null);
   const [selectedStock, setSelectedStock] = useState(null);
   const [exchangeRate, setExchangeRate] = useState(36.5);
+  const [showAmounts, setShowAmounts] = useState(() => {
+    const saved = localStorage.getItem('show_amounts');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('show_amounts', JSON.stringify(showAmounts));
+  }, [showAmounts]);
   const PORT_CATEGORIES = {
     'Hold': ['Extra', 'Main', 'Second', 'Addon', 'Begin', 'DR'],
     'Trade': ['Trade'],
@@ -769,14 +801,23 @@ function App() {
             </span>
           </div>
         </div>
-        <button 
-          className="refresh-button" 
-          onClick={fetchData} 
-          disabled={loading}
-        >
-          <i className={`fa-solid fa-arrows-rotate ${loading ? 'animate-spin' : ''}`} style={{ fontSize: '18px' }}></i>
-          <span>{loading ? 'กำลังรีเฟรช...' : 'รีเฟรชใหม่'}</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button 
+            className="eye-toggle-button"
+            onClick={() => setShowAmounts(!showAmounts)}
+            title={showAmounts ? "ซ่อนตัวเลขเงิน" : "แสดงตัวเลขเงิน"}
+          >
+            <i className={`fa-solid ${showAmounts ? 'fa-eye' : 'fa-eye-slash'}`} style={{ fontSize: '18px' }}></i>
+          </button>
+          <button 
+            className="refresh-button" 
+            onClick={fetchData} 
+            disabled={loading}
+          >
+            <i className={`fa-solid fa-arrows-rotate ${loading ? 'animate-spin' : ''}`} style={{ fontSize: '18px' }}></i>
+            <span>{loading ? 'กำลังรีเฟรช...' : 'รีเฟรชใหม่'}</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Tabs */}
@@ -862,8 +903,8 @@ function App() {
         />
         <SummaryCard 
           label="ราคาตั้งซื้อทั้งหมด" 
-          value={formatCurrency(summary.totalTargetPrice)} 
-          subValue={formatTHB(summary.totalTargetPrice * exchangeRate)}
+          value={showAmounts ? formatCurrency(summary.totalTargetPrice) : maskFormattedMoney(formatCurrency(summary.totalTargetPrice))} 
+          subValue={showAmounts ? formatTHB(summary.totalTargetPrice * exchangeRate) : maskFormattedMoney(formatTHB(summary.totalTargetPrice * exchangeRate))}
           icon={<i className="fa-solid fa-bullseye" style={{ fontSize: '18px', color: '#3b82f6' }}></i>}
           iconBgColor="rgba(59, 130, 246, 0.1)"
           delay={0.3}
@@ -872,8 +913,8 @@ function App() {
         />
         <SummaryCard 
           label="ยอดตั้งซื้อทั้งหมด" 
-          value={formatCurrency(summary.totalRemainingTarget)} 
-          subValue={formatTHB(summary.totalRemainingTarget * exchangeRate)}
+          value={showAmounts ? formatCurrency(summary.totalRemainingTarget) : maskFormattedMoney(formatCurrency(summary.totalRemainingTarget))} 
+          subValue={showAmounts ? formatTHB(summary.totalRemainingTarget * exchangeRate) : maskFormattedMoney(formatTHB(summary.totalRemainingTarget * exchangeRate))}
           icon={<i className="fa-solid fa-bars-progress" style={{ fontSize: '18px', color: '#f59e0b' }}></i>}
           iconBgColor="rgba(245, 158, 11, 0.1)"
           delay={0.4}
@@ -893,8 +934,8 @@ function App() {
 
         <SummaryCard 
           label="ยอดซื้อทั้งหมด" 
-          value={formatCurrency(summary.totalBuyAmount)} 
-          subValue={formatTHB(summary.totalBuyAmount * exchangeRate)}
+          value={showAmounts ? formatCurrency(summary.totalBuyAmount) : maskFormattedMoney(formatCurrency(summary.totalBuyAmount))} 
+          subValue={showAmounts ? formatTHB(summary.totalBuyAmount * exchangeRate) : maskFormattedMoney(formatTHB(summary.totalBuyAmount * exchangeRate))}
           icon={<i className="fa-solid fa-cart-shopping" style={{ fontSize: '18px', color: '#6366f1' }}></i>}
           iconBgColor="rgba(99, 102, 241, 0.1)"
           delay={0.5}
@@ -903,8 +944,8 @@ function App() {
         />
         <SummaryCard 
           label="ยอดขายทั้งหมด" 
-          value={formatCurrency(summary.totalSellAmount)} 
-          subValue={formatTHB(summary.totalSellAmount * exchangeRate)}
+          value={showAmounts ? formatCurrency(summary.totalSellAmount) : maskFormattedMoney(formatCurrency(summary.totalSellAmount))} 
+          subValue={showAmounts ? formatTHB(summary.totalSellAmount * exchangeRate) : maskFormattedMoney(formatTHB(summary.totalSellAmount * exchangeRate))}
           icon={<i className="fa-solid fa-hand-holding-dollar" style={{ fontSize: '18px', color: '#10b981' }}></i>}
           iconBgColor="rgba(16, 185, 129, 0.1)"
           delay={0.6}
@@ -1212,6 +1253,7 @@ function App() {
                   index={index} 
                   onUpdateClick={setSelectedStock} 
                   exchangeRate={exchangeRate}
+                  showAmounts={showAmounts}
                 />
               ))
             ) : (
@@ -1399,18 +1441,28 @@ function InteractiveTime({ label, dateStr, colorClass, customDisplay, customStyl
   );
 }
 
-function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
+function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
   const [logoError, setLogoError] = useState(false);
   const ticker = stock["ชื่อหุ้น"];
   const logoUrl = `https://assets.parqet.com/logos/symbol/${ticker}?format=png`;
 
   const DetailItem = ({ label, value, isMoney = false, relativeTime = '', colorClass = '', percent = null }) => {
     const parsedValue = parseNumber(value);
+    const shouldHide = !showAmounts && (label === "ยอดซื้อ" || label === "ยอดขาย" || label === "ราคาตั้งซื้อ" || label === "ยอดตั้งซื้อ");
+    
+    let displayValue = value || '-';
+    if (isMoney) {
+      const formatted = parsedValue < 0 
+        ? `-$${Math.abs(parsedValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+        : `$${parsedValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      displayValue = shouldHide ? maskFormattedMoney(formatted) : formatted;
+    }
+
     return (
       <div className={`detail-item ${colorClass}`}>
         <span className="detail-label">{label}</span>
         <span className={`detail-value ${colorClass.startsWith('color-') ? colorClass : ''}`}>
-          {isMoney ? (parsedValue < 0 ? `-$${Math.abs(parsedValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${parsedValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`) : value || '-'}
+          {displayValue}
           {relativeTime && <span className="relative-time">{relativeTime}</span>}
         </span>
         {isMoney && (
@@ -1419,9 +1471,14 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate }) {
             style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.25rem', flexWrap: 'wrap' }}
           >
             <span>
-              ≈ {parsedValue * exchangeRate < 0 ? `-฿${Math.abs(parsedValue * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `฿${(parsedValue * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              {(() => {
+                const formattedSub = parsedValue * exchangeRate < 0 
+                  ? `≈ -฿${Math.abs(parsedValue * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                  : `≈ ฿${(parsedValue * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                return shouldHide ? maskFormattedMoney(formattedSub) : formattedSub;
+              })()}
             </span>
-            {percent !== null && percent !== undefined && (
+            {percent !== null && percent !== undefined && !shouldHide && (
               <span style={{ fontSize: '0.65rem', fontWeight: 700, color: Math.abs(percent) < 1e-9 ? '#94a3b8' : undefined }}>
                 ({percent > 0 ? '+' : ''}{percent.toFixed(2)}%)
               </span>
