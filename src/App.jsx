@@ -1588,7 +1588,54 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
               stock["ตลาด"] === 'NYSE' ? 'market-tag-nyse' :
               stock["ตลาด"] === 'NASDAQ' ? 'market-tag-nasdaq' : ''
             }`}>{stock["ตลาด"]}</span>
-            <span className="text-muted" style={{ fontSize: '0.85rem' }}>{stock["ประเภท"]}</span>
+            {(() => {
+              const typeVal = stock["ประเภท"];
+              if (!typeVal) return null;
+              
+              const sectorMap = {
+                'เทคโนโลยีอิเลคทรอนิกส์': 'electronic-technology',
+                'บริการทางด้านเทคโนโลยี': 'technology-services',
+                'เทคโนโลยีเกี่ยวกับสุขภาพ': 'health-technology',
+                'การค้าปลีก': 'retail-trade',
+                'การผลิตของผู้ผลิต': 'producer-manufacturing',
+                'บริการการกระจายสินค้า': 'distribution-services',
+                'สินค้าอุปโภคที่ไม่คงทนถาวร': 'consumer-non-durables',
+                'สินค้าอุปโภคคงทนถาวร': 'consumer-durables',
+                'อุตสาหกรรมเชิงกระบวนการ': 'process-industries',
+                'บริการเกี่ยวกับอุตสาหกรรม': 'commercial-services',
+                'บริการพาณิชยกรรม': 'commercial-services',
+                'แร่พลังงาน': 'energy-minerals',
+                'การเงิน': 'finance',
+                'สาธารณูปโภค': 'utilities',
+                'การขนส่ง': 'transportation',
+                'บริการสำหรับผู้บริโภค': 'consumer-services',
+                'บริการเกี่ยวกับสุขภาพ': 'health-services',
+                'แร่ที่ไม่ใช่พลังงาน': 'non-energy-minerals',
+                'การสื่อสาร': 'communications'
+              };
+              
+              const slug = sectorMap[typeVal.trim()];
+              if (slug) {
+                const url = `https://th.tradingview.com/markets/stocks-usa/sectorandindustry-sector/${slug}/`;
+                return (
+                  <a 
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`ดูหมวดหมู่ ${typeVal} ใน TradingView`}
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                    className="hover-opacity"
+                  >
+                    <span className="text-muted" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      {typeVal}
+                      <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '8px', opacity: 0.65 }}></i>
+                    </span>
+                  </a>
+                );
+              }
+              
+              return <span className="text-muted" style={{ fontSize: '0.85rem' }}>{typeVal}</span>;
+            })()}
             {stock["หลักชะรีอะฮ์"] && (
               <a 
                 href={stock["Musaffa"] || '#'} 
