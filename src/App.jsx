@@ -910,7 +910,7 @@ function App() {
           iconBgColor="rgba(245, 158, 11, 0.1)"
           delay={0.4}
           numValue={summary.totalRemainingTarget}
-          colorMode="financial-dark"
+          colorMode="binary"
         />
         <SummaryCard 
           label="ยอดตั้งกำจัดทั้งหมด" 
@@ -920,7 +920,7 @@ function App() {
           iconBgColor="rgba(6, 180, 212, 0.1)"
           delay={0.45}
           numValue={summary.totalTargetClearAmount}
-          colorMode="financial-dark"
+          colorMode="binary"
         />
 
         <SummaryCard 
@@ -1298,6 +1298,7 @@ function App() {
 function SummaryCard({ label, value, subValue, icon, delay, numValue, colorMode = 'financial', iconBgColor }) {
   const getValueColor = () => {
     if (numValue === undefined || numValue === null) return '';
+    if (numValue < 0) return 'color-red';
     if (colorMode === 'binary') {
       return numValue === 0 ? 'color-grey' : 'color-black';
     }
@@ -1523,16 +1524,19 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
 
   const getBinaryColorClass = (val) => {
     const num = parseNumber(val);
+    if (num < 0) return 'color-red';
     return num === 0 ? 'color-grey' : 'color-black';
   };
 
   const getGoldColorClass = (val) => {
     const num = parseNumber(val);
+    if (num < 0) return 'color-red';
     return num === 0 ? 'color-grey' : 'color-gold';
   };
 
   const getOrangeColorClass = (val) => {
     const num = parseNumber(val);
+    if (num < 0) return 'color-red';
     return num === 0 ? 'color-grey' : 'color-orange';
   };
 
@@ -1578,9 +1582,36 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
               className="ticker-link hover-opacity"
             >
               <span style={{ fontWeight: 700 }}>{ticker}</span>
-              <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '10px', opacity: 0.65 }}></i>
             </a>
-            <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85rem' }}>{stock["ชื่อบริษัท"]}</span>
+            {stock["เว็บไซต์"] ? (
+              <a 
+                href={stock["เว็บไซต์"]} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                title={`ไปที่เว็บไซต์ของ ${stock["ชื่อบริษัท"]}`}
+                style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                className="hover-opacity text-muted"
+              >
+                <span style={{ fontWeight: 400, fontSize: '0.85rem' }}>{stock["ชื่อบริษัท"]}</span>
+              </a>
+            ) : (
+              <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.85rem' }}>{stock["ชื่อบริษัท"]}</span>
+            )}
+            {stock["หลักชะรีอะฮ์"] && (
+              <a 
+                href={stock["Musaffa"] || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className={`shariah-badge shariah-${stock["หลักชะรีอะฮ์"].trim().toLowerCase().replace(/\s+/g, '-')}`}
+                title="ตรวจสอบสถานะบน Musaffa"
+                onClick={(e) => {
+                  if (!stock["Musaffa"]) e.preventDefault();
+                }}
+              >
+                <i className="fa-solid fa-leaf" style={{ fontSize: '10px' }}></i>
+                <span>{stock["หลักชะรีอะฮ์"]}</span>
+              </a>
+            )}
             {stock["ลำดับการซื้อ"] && <span className="order-tag">ลำดับที่ {stock["ลำดับการซื้อ"]}</span>}
           </h3>
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1589,7 +1620,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
               stock["ตลาด"] === 'NASDAQ' ? 'market-tag-nasdaq' : ''
             }`}>{stock["ตลาด"]}</span>
             {(() => {
-              const typeVal = stock["ประเภท"];
+              const typeVal = stock["หมวดธุรกิจ"];
               if (!typeVal) return null;
               
               const sectorMap = {
@@ -1628,7 +1659,6 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
                   >
                     <span className="text-muted" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                       {typeVal}
-                      <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '8px', opacity: 0.65 }}></i>
                     </span>
                   </a>
                 );
@@ -1636,24 +1666,60 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
               
               return <span className="text-muted" style={{ fontSize: '0.85rem' }}>{typeVal}</span>;
             })()}
-            {stock["หลักชะรีอะฮ์"] && (
-              <a 
-                href={stock["Musaffa"] || '#'} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className={`shariah-badge shariah-${stock["หลักชะรีอะฮ์"].trim().toLowerCase().replace(/\s+/g, '-')}`}
-                title="ตรวจสอบสถานะบน Musaffa"
-                onClick={(e) => {
-                  if (!stock["Musaffa"]) e.preventDefault();
-                }}
-              >
-                <i className="fa-solid fa-leaf" style={{ fontSize: '10px' }}></i>
-                <span>{stock["หลักชะรีอะฮ์"]}</span>
-                {stock["Musaffa"] && (
-                  <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '8px', opacity: 0.7 }}></i>
-                )}
-              </a>
-            )}
+            {stock["อุตสาหกรรม"] && <span className="text-muted" style={{ opacity: 0.4, fontSize: '0.85rem' }}>/</span>}
+            {(() => {
+              const indVal = stock["อุตสาหกรรม"];
+              if (!indVal) return null;
+              
+              const industryMap = {
+                'เซมิคอนดักเตอร์': 'semiconductors',
+                'ยารายใหญ่': 'pharmaceuticals-major',
+                'ชุดซอฟต์แวร์สำเร็จรูป': 'packaged-software',
+                'อุปกรณ์โทรคมนาคม': 'telecommunications-equipment',
+                'เครื่องจักรอุตสาหกรรม': 'industrial-machinery',
+                'การดูแลครัวเรือน/บุคคล': 'household-personal-care',
+                'เครือข่ายการพัฒนาปรับปรุงบ้าน': 'home-improvement-chains',
+                'เคมีพิเศษเฉพาะ': 'chemicals-specialty',
+                'อุปกรณ์ต่อพ่วงคอมพิวเตอร์': 'computer-peripherals',
+                'เชี่ยวชาญพิเศษด้านการแพทย์': 'medical-specialties',
+                'ชิ้นส่วนอิเลคทรอนิกส์': 'electronic-components',
+                'ค้าปลีกเกี่ยวกับเสื้อผ้า/รองเท้า': 'apparel-footwear-retail',
+                'เครื่องใช้ไฟฟ้า': 'electrical-products',
+                'วิศวกรรมและก่อสร้าง': 'engineering-construction',
+                'ผู้จัดจำหน่ายทางการแพทย์': 'medical-distributors',
+                'บริการด้านสิ่งแวดล้อม': 'environmental-services',
+                'เชี่ยวชาญพิเศษด้านอุตสาหกรรม': 'industrial-specialties',
+                'ผู้จัดจำหน่ายค้าส่ง': 'wholesale-distributors',
+                'ร้านค้าพิเศษเฉพาะ': 'specialty-stores',
+                'บริการด้านเทคโนโลยีสารสนเทศ': 'information-technology-services',
+                'บริการน้ำมันแบบครบวงจร': 'integrated-oil',
+                'การผลิตน้ำมันและก๊าซ': 'oil-gas-production',
+                'สินค้าโภคภัณฑ์/เครื่องจักรทางการเกษตร': 'agricultural-commodities-milling',
+                'การกลั่นน้ำมันและการตลาดเกี่ยวกับน้ำมัน': 'oil-refining-marketing',
+                'ไบโอเทคโนโลยี': 'biotechnology'
+              };
+              
+              const slug = industryMap[indVal.trim()];
+              if (slug) {
+                const url = `https://th.tradingview.com/markets/stocks-usa/sectorandindustry-industry/${slug}/`;
+                return (
+                  <a 
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`ดูอุตสาหกรรม ${indVal} ใน TradingView`}
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                    className="hover-opacity"
+                  >
+                    <span className="text-muted" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      {indVal}
+                    </span>
+                  </a>
+                );
+              }
+              
+              return <span className="text-muted" style={{ fontSize: '0.85rem' }}>{indVal}</span>;
+            })()}
           </div>
         </div>
 
@@ -1667,11 +1733,14 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
                   style={{ 
                     background: clearRateVal === 0 ? '#f1f5f9' : '#fff7ed', 
                     color: clearRateVal === 0 ? 'var(--text-muted)' : '#ea580c', 
-                    padding: '0.2rem 0.5rem', 
+                    padding: '0.2rem 0.6rem', 
                     borderRadius: '20px', 
                     fontSize: '0.7rem', 
-                    fontWeight: 600,
-                    border: clearRateVal === 0 ? '1px solid rgba(100, 116, 139, 0.12)' : '1px solid rgba(234, 88, 12, 0.2)'
+                    fontWeight: 700,
+                    border: clearRateVal === 0 ? '1px solid rgba(100, 116, 139, 0.12)' : '1px solid rgba(234, 88, 12, 0.2)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
                   }}
                 >
                     กำจัด {clearRateVal.toFixed(2)}%
@@ -1684,14 +1753,16 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
                 <div 
                   className={`dividend-tag ${dividendVal === 0 ? 'dividend-tag-zero' : ''}`} 
                   style={{ 
-                    display: 'inline-block',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
                     background: dividendVal === 0 ? '#f1f5f9' : '#ecfdf5',
                     color: dividendVal === 0 ? 'var(--text-muted)' : 'var(--success)',
                     border: dividendVal === 0 ? '1px solid rgba(100, 116, 139, 0.12)' : '1px solid rgba(16, 185, 129, 0.18)',
-                    padding: '0.2rem 0.5rem',
+                    padding: '0.2rem 0.6rem',
                     borderRadius: '20px',
                     fontSize: '0.7rem',
-                    fontWeight: 600
+                    fontWeight: 700
                   }}
                 >
                   ปันผล {dividendVal.toFixed(2)}%
@@ -1721,8 +1792,8 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
 
       <div className="stock-details-grid">
         <DetailItem label="ราคาตั้งซื้อ" value={stock["ราคาตั้งซื้อ ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ราคาตั้งซื้อ ($)"])} />
-        <DetailItem label="ยอดตั้งซื้อ" value={remainingTarget} isMoney={true} colorClass={getStatusColor(remainingTarget)} />
-        <DetailItem label="ยอดตั้งกำจัด" value={targetClearAmount} isMoney={true} colorClass={getStatusColor(targetClearAmount)} />
+        <DetailItem label="ยอดตั้งซื้อ" value={remainingTarget} isMoney={true} colorClass={getBinaryColorClass(remainingTarget)} />
+        <DetailItem label="ยอดตั้งกำจัด" value={targetClearAmount} isMoney={true} colorClass={getBinaryColorClass(targetClearAmount)} />
         <DetailItem label="ยอดซื้อ" value={stock["ยอดซื้อ ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดซื้อ ($)"])} />
         <DetailItem label="ยอดขาย" value={stock["ยอดขาย ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ยอดขาย ($)"])} />
         <DetailItem label="ยอดปันผล" value={stock["ยอดปันผล ($)"]} isMoney={true} colorClass={getStatusColor(parseNumber(stock["ยอดปันผล ($)"]))} percent={dividendPercent} />
@@ -2250,14 +2321,14 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                 <div className="target-summary-divider" style={{ margin: '0 0.5rem' }}></div>
                 <div className="target-ref-card" style={{ minWidth: '100px', flex: '1 1 0' }}>
                   <span className="target-ref-label">ยอดตั้งซื้อ</span>
-                  <span className={`target-ref-value ${remainingTarget > 0 ? 'text-green' : remainingTarget < 0 ? 'text-red' : 'text-grey'}`} style={{ fontSize: '1rem' }}>
+                  <span className={`target-ref-value ${remainingTarget === 0 ? 'text-grey' : ''}`} style={{ fontSize: '1rem' }}>
                     ${remainingTarget.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="target-summary-divider" style={{ margin: '0 0.5rem' }}></div>
                 <div className="target-ref-card" style={{ minWidth: '100px', flex: '1 1 0' }}>
                   <span className="target-ref-label">ยอดตั้งกำจัด</span>
-                  <span className={`target-ref-value ${currentTargetClearAmount > 0 ? 'text-green' : currentTargetClearAmount < 0 ? 'text-red' : 'text-grey'}`} style={{ fontSize: '1rem' }}>
+                  <span className={`target-ref-value ${currentTargetClearAmount === 0 ? 'text-grey' : ''}`} style={{ fontSize: '1rem' }}>
                     ${currentTargetClearAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 </div>
