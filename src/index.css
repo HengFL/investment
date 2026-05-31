@@ -732,8 +732,13 @@ h1 {
   font-weight: 600;
   margin-top: auto;
 }
+.logo-link {
+  display: block;
+  text-decoration: none;
+}
 
-.logo-link:hover .stock-icon {
+.logo-link:hover .stock-icon,
+.logo-link:hover .modal-stock-icon {
   border-color: var(--primary);
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
@@ -742,6 +747,10 @@ h1 {
 .stock-icon {
   transition: all 0.2s ease;
   border: 1px solid transparent;
+}
+
+.modal-stock-icon {
+  transition: all 0.2s ease;
 }
 
 /* Responsive */

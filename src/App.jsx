@@ -1437,6 +1437,11 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
   const [logoError, setLogoError] = useState(false);
   const ticker = stock["ชื่อหุ้น"];
   const logoUrl = `https://assets.parqet.com/logos/symbol/${ticker}?format=png`;
+  const tvMarket = (stock["ตลาด"] || '').trim().toUpperCase();
+  const tvTicker = (ticker || '').trim().toUpperCase();
+  const tradingViewUrl = tvMarket && tvTicker 
+    ? `https://th.tradingview.com/symbols/${tvMarket}-${tvTicker}/` 
+    : (stock["TradingView"] || `https://th.tradingview.com/symbols/${tvTicker}/`);
 
   const DetailItem = ({ label, value, isMoney = false, relativeTime = '', colorClass = '', percent = null }) => {
     const parsedValue = parseNumber(value);
@@ -1541,23 +1546,31 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
       transition={{ delay: index * 0.03 }}
     >
       <div className="stock-main-info">
-        <div className="stock-icon" style={{ overflow: 'hidden' }}>
-          {!logoError ? (
-            <img 
-              src={logoUrl} 
-              alt={ticker} 
-              onError={() => setLogoError(true)}
-              style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }}
-            />
-          ) : (
-            <span style={{ fontSize: '0.8rem' }}>{ticker.substring(0, 2)}</span>
-          )}
-        </div>
+        <a 
+          href={tradingViewUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={`ดูภาพรวม ${ticker} ใน TradingView`}
+          className="logo-link"
+        >
+          <div className="stock-icon" style={{ overflow: 'hidden' }}>
+            {!logoError ? (
+              <img 
+                src={logoUrl} 
+                alt={ticker} 
+                onError={() => setLogoError(true)}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }}
+              />
+            ) : (
+              <span style={{ fontSize: '0.8rem' }}>{ticker.substring(0, 2)}</span>
+            )}
+          </div>
+        </a>
         
         <div className="stock-info">
           <h3 style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', margin: 0 }}>
             <a 
-              href={stock["TradingView"]} 
+              href={tradingViewUrl} 
               target="_blank" 
               rel="noopener noreferrer" 
               title="ดูใน TradingView"
@@ -1721,6 +1734,12 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
 }
 
 function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
+  const tvMarket = (stock["ตลาด"] || '').trim().toUpperCase();
+  const tvTicker = (stock["ชื่อหุ้น"] || '').trim().toUpperCase();
+  const tradingViewUrl = tvMarket && tvTicker 
+    ? `https://th.tradingview.com/symbols/${tvMarket}-${tvTicker}/` 
+    : (stock["TradingView"] || `https://th.tradingview.com/symbols/${tvTicker}/`);
+
   const targetPrice = parseNumber(stock["ราคาตั้งซื้อ ($)"]);
   const targetAmount = targetPrice > 0 ? calculateTargetAmount(stock["วันที่กำหนด"], stock["ราคาตั้งซื้อ ($)"]) : 0;
   const rawRemainingTarget = (stock.port === 'Trade' || targetPrice <= 0)
@@ -2122,25 +2141,33 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
           <form onSubmit={handleSubmit}>
             <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                <div className="modal-stock-icon">
-                  <img 
-                    src={`https://assets.parqet.com/logos/symbol/${stock["ชื่อหุ้น"]}?format=png`} 
-                    alt={stock["ชื่อหุ้น"]} 
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'block';
-                    }}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '2px' }}
-                  />
-                  <span style={{ display: 'none', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)', padding: '8px' }}>
-                    {stock["ชื่อหุ้น"].substring(0, 2)}
-                  </span>
-                </div>
+                <a 
+                  href={tradingViewUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  title="ดูภาพรวมใน TradingView"
+                  className="logo-link"
+                >
+                  <div className="modal-stock-icon">
+                    <img 
+                      src={`https://assets.parqet.com/logos/symbol/${stock["ชื่อหุ้น"]}?format=png`} 
+                      alt={stock["ชื่อหุ้น"]} 
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '2px' }}
+                    />
+                    <span style={{ display: 'none', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)', padding: '8px' }}>
+                      {stock["ชื่อหุ้น"].substring(0, 2)}
+                    </span>
+                  </div>
+                </a>
                 <div>
                   <h3 className="modal-title">
                     อัปเดต{' '}
                     <a 
-                      href={stock["TradingView"]} 
+                      href={tradingViewUrl} 
                       target="_blank" 
                       rel="noopener noreferrer" 
                       title="คลิกเพื่อดูกราฟ"
