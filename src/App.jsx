@@ -1570,7 +1570,7 @@ function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
         <div className="stock-info">
           <h3 style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', margin: 0 }}>
             <a 
-              href={tradingViewUrl} 
+              href={stock["TradingView"]} 
               target="_blank" 
               rel="noopener noreferrer" 
               title="ดูใน TradingView"
@@ -2167,7 +2167,7 @@ function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpdateSuccess }) {
                   <h3 className="modal-title">
                     อัปเดต{' '}
                     <a 
-                      href={tradingViewUrl} 
+                      href={stock["TradingView"]} 
                       target="_blank" 
                       rel="noopener noreferrer" 
                       title="คลิกเพื่อดูกราฟ"
