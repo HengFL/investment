@@ -51,8 +51,16 @@ function App() {
         })
       ]);
       
-      const json = await stockRes.json();
-      const dataWithIndex = json.map((item, idx) => ({ ...item, originalIndex: idx }));
+      let json;
+      try {
+        json = await stockRes.clone().json();
+      } catch (e) {
+        const text = await stockRes.text();
+        console.error("Failed to parse JSON. Response text:", text.substring(0, 500));
+        throw e;
+      }
+      const rawData = Array.isArray(json) ? json : (json.data || []);
+      const dataWithIndex = rawData.map((item, idx) => ({ ...item, originalIndex: idx }));
       setData(dataWithIndex);
       
       if (rateRes && rateRes.ok) {

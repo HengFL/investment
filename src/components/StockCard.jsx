@@ -453,6 +453,12 @@ export default function StockCard({ stock, index, onUpdateClick, exchangeRate, s
               dateStr={stock["วันที่ขายล่าสุด"]} 
             />
           )}
+          {stock["วันที่ปันผลล่าสุด"] && (
+            <InteractiveTime 
+              label="ปันผลล่าสุด" 
+              dateStr={stock["วันที่ปันผลล่าสุด"]} 
+            />
+          )}
         </div>
         <button 
           className="update-card-btn"
