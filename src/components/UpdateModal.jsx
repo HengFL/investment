@@ -25,6 +25,7 @@ export default function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpd
   const originalBuyDate = stock["วันที่ซื้อล่าสุด"] ? formatDate(stock["วันที่ซื้อล่าสุด"]) : 'ไม่มี';
   const originalSellDate = stock["วันที่ขายล่าสุด"] ? formatDate(stock["วันที่ขายล่าสุด"]) : 'ไม่มี';
   const originalDividendDate = stock["วันที่ปันผลล่าสุด"] ? formatDate(stock["วันที่ปันผลล่าสุด"]) : 'ไม่มี';
+  const originalClearDate = stock["วันที่กำจัดล่าสุด"] || stock["last_clear_date"] ? formatDate(stock["วันที่กำจัดล่าสุด"] || stock["last_clear_date"]) : 'ไม่มี';
 
   const formatOriginalMoney = (val) => {
     const num = parseNumber(val);
@@ -51,6 +52,9 @@ export default function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpd
   });
   const [lastDividendDate, setLastDividendDate] = useState(() => {
     return stock["วันที่ปันผลล่าสุด"] ? parseDate(stock["วันที่ปันผลล่าสุด"]) : null;
+  });
+  const [lastClearDate, setLastClearDate] = useState(() => {
+    return (stock["วันที่กำจัดล่าสุด"] || stock["last_clear_date"]) ? parseDate(stock["วันที่กำจัดล่าสุด"] || stock["last_clear_date"]) : null;
   });
   const [buyAmount, setBuyAmount] = useState(() => {
     return stock["ยอดซื้อ ($)"] !== undefined && stock["ยอดซื้อ ($)"] !== null ? stock["ยอดซื้อ ($)"] : '';
@@ -86,6 +90,7 @@ export default function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpd
   const originalBuyAmountRaw = useMemo(() => stock["ยอดซื้อ ($)"] !== undefined && stock["ยอดซื้อ ($)"] !== null ? String(stock["ยอดซื้อ ($)"]) : '', [stock]);
   const originalSellAmountRaw = useMemo(() => stock["ยอดขาย ($)"] !== undefined && stock["ยอดขาย ($)"] !== null ? String(stock["ยอดขาย ($)"]) : '', [stock]);
   const originalDividendAmountRaw = useMemo(() => stock["ยอดปันผล ($)"] !== undefined && stock["ยอดปันผล ($)"] !== null ? String(stock["ยอดปันผล ($)"]) : '', [stock]);
+  const originalClearAmountRaw = useMemo(() => (stock["ยอดกำจัด ($)"] !== undefined && stock["ยอดกำจัด ($)"] !== null) ? String(stock["ยอดกำจัด ($)"]) : (stock["clear_amount"] !== undefined && stock["clear_amount"] !== null ? String(stock["clear_amount"]) : ''), [stock]);
 
   const rawTotalProfit = stockStatus === "ขายแล้ว" || stockStatus === "รอซื้อ"
     ? parseNumber(sellAmount) - parseNumber(buyAmount)
@@ -216,7 +221,12 @@ export default function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpd
       }
     }
     else if (activeCalcField === 'taxAmount') setTaxAmount(resultStr);
-    else if (activeCalcField === 'clearAmount') setClearAmount(resultStr);
+    else if (activeCalcField === 'clearAmount') {
+      setClearAmount(resultStr);
+      if (resultStr !== '' && resultStr !== originalClearAmountRaw) {
+        setLastClearDate(new Date());
+      }
+    }
     else if (activeCalcField === 'dividendRate') setDividendRate(resultStr);
     else if (activeCalcField === 'clearRate') setClearRate(resultStr);
 
@@ -344,6 +354,7 @@ export default function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpd
       last_buy_date: lastBuyDate ? `${lastBuyDate.getFullYear()}-${String(lastBuyDate.getMonth() + 1).padStart(2, '0')}-${String(lastBuyDate.getDate()).padStart(2, '0')}` : null,
       last_sell_date: lastSellDate ? `${lastSellDate.getFullYear()}-${String(lastSellDate.getMonth() + 1).padStart(2, '0')}-${String(lastSellDate.getDate()).padStart(2, '0')}` : null,
       last_dividend_date: lastDividendDate ? `${lastDividendDate.getFullYear()}-${String(lastDividendDate.getMonth() + 1).padStart(2, '0')}-${String(lastDividendDate.getDate()).padStart(2, '0')}` : null,
+      last_clear_date: lastClearDate ? `${lastClearDate.getFullYear()}-${String(lastClearDate.getMonth() + 1).padStart(2, '0')}-${String(lastClearDate.getDate()).padStart(2, '0')}` : null,
       buy_amount: getOrNull(buyAmount),
       sell_amount: getOrNull(sellAmount),
       dividend_amount: getOrNull(dividendAmount),
@@ -836,6 +847,26 @@ export default function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpd
                 </div>
 
                 <div className="form-group">
+                  <label className="form-label">
+                    วันที่กำจัดล่าสุด
+                  </label>
+                  <DatePicker
+                    selected={lastClearDate}
+                    onChange={(date) => setLastClearDate(date)}
+                    className="form-input"
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="วว/ดด/ปปปป"
+                    isClearable
+                    todayButton="วันนี้"
+                    popperPlacement="top"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                  />
+                  <span className="input-helper-text">ค่าเดิม: {originalClearDate}</span>
+                </div>
+
+                <div className="form-group">
                   <label className="form-label">ยอดซื้อ ($)</label>
                   <div className="input-with-button">
                     <input 
@@ -960,7 +991,12 @@ export default function UpdateModal({ stock, exchangeRate = 36.5, onClose, onUpd
                       placeholder="0.00"
                       className="form-input" 
                       value={clearAmount} 
-                      onChange={(e) => setClearAmount(e.target.value)}
+                      onChange={(e) => {
+                        setClearAmount(e.target.value);
+                        if (e.target.value !== '' && e.target.value !== originalClearAmountRaw) {
+                          setLastClearDate(new Date());
+                        }
+                      }}
                     />
                     <button 
                       type="button" 

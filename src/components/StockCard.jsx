@@ -457,6 +457,13 @@ export default function StockCard({ stock, index, onUpdateClick, exchangeRate, s
             <InteractiveTime 
               label="ปันผลล่าสุด" 
               dateStr={stock["วันที่ปันผลล่าสุด"]} 
+              colorClass={getTimeColor(stock["วันที่ปันผลล่าสุด"])} 
+            />
+          )}
+          {(stock["วันที่กำจัดล่าสุด"] || stock["last_clear_date"]) && (
+            <InteractiveTime 
+              label="กำจัดล่าสุด" 
+              dateStr={stock["วันที่กำจัดล่าสุด"] || stock["last_clear_date"]} 
             />
           )}
         </div>
