@@ -17,6 +17,8 @@ import StockCard from './components/StockCard';
 import UpdateModal from './components/UpdateModal';
 import AssetCharts from './components/AssetCharts';
 import InteractiveTime from './components/InteractiveTime';
+import PinPopover from './components/PinPopover';
+import { APP_CONFIG } from './constants/config';
 
 function App() {
   const [data, setData] = useState([]);
@@ -24,9 +26,21 @@ function App() {
   const [error, setError] = useState(null);
   const [selectedStock, setSelectedStock] = useState(null);
   const [exchangeRate, setExchangeRate] = useState(36.5);
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    const expires = localStorage.getItem('pin_verified_until');
+    return !!(expires && new Date().getTime() < parseInt(expires, 10));
+  });
+
   const [showAmounts, setShowAmounts] = useState(() => {
     const saved = localStorage.getItem('show_amounts');
-    return saved !== null ? JSON.parse(saved) : true;
+    const isShowing = saved !== null ? JSON.parse(saved) : false;
+    if (isShowing) {
+      const expires = localStorage.getItem('pin_verified_until');
+      if (expires && new Date().getTime() < parseInt(expires, 10)) {
+        return true;
+      }
+    }
+    return false;
   });
 
   useEffect(() => {
@@ -39,6 +53,7 @@ function App() {
   const [sortBy, setSortBy] = useState('ลำดับที่');
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
   const [viewMode, setViewMode] = useState('list');
+  const [isPinPopoverOpen, setIsPinPopoverOpen] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -350,8 +365,42 @@ function App() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <PinPopover 
+            isOpen={isPinPopoverOpen} 
+            setIsOpen={setIsPinPopoverOpen}
+            onSuccess={() => {
+              const oneDay = 24 * 60 * 60 * 1000;
+              localStorage.setItem('pin_verified_until', (new Date().getTime() + oneDay).toString());
+              setIsUnlocked(true);
+            }}
+            disabled={isUnlocked}
+          >
+            <button 
+              className="eye-toggle-button"
+              style={{
+                color: isUnlocked ? '#10b981' : '#f43f5e',
+                borderColor: isUnlocked ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)',
+                backgroundColor: isUnlocked ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)'
+              }}
+              onClick={(e) => {
+                if (isUnlocked) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  localStorage.removeItem('pin_verified_until');
+                  localStorage.removeItem('show_amounts');
+                  setIsUnlocked(false);
+                  setShowAmounts(false);
+                }
+              }}
+              title={isUnlocked ? "ล็อคข้อมูล" : "ปลดล็อคข้อมูล"}
+            >
+              <i className={`fa-solid ${isUnlocked ? 'fa-unlock' : 'fa-lock'}`} style={{ fontSize: '14px' }}></i>
+            </button>
+          </PinPopover>
           <button 
             className="eye-toggle-button"
+            disabled={!isUnlocked}
+            style={{ opacity: !isUnlocked ? 0.5 : 1, cursor: !isUnlocked ? 'not-allowed' : 'pointer' }}
             onClick={() => setShowAmounts(!showAmounts)}
             title={showAmounts ? "ซ่อนตัวเลขเงิน" : "แสดงตัวเลขเงิน"}
           >
@@ -814,6 +863,7 @@ function App() {
                   onUpdateClick={setSelectedStock} 
                   exchangeRate={exchangeRate}
                   showAmounts={showAmounts}
+                  isUnlocked={isUnlocked}
                 />
               ))
             ) : (

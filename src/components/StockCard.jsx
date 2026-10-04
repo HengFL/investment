@@ -4,7 +4,7 @@ import InteractiveTime from './InteractiveTime';
 import { parseNumber, formatCurrency, maskFormattedMoney, calculateTargetAmount, parsePercentChange } from '../utils/numberUtils';
 import { getHoldingAge, getTimeColor } from '../utils/dateUtils';
 
-export default function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts }) {
+export default function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts, isUnlocked }) {
   const [logoError, setLogoError] = useState(false);
   const ticker = stock["ชื่อหุ้น"];
   const logoUrl = `https://assets.parqet.com/logos/symbol/${ticker}?format=png`;
@@ -469,6 +469,8 @@ export default function StockCard({ stock, index, onUpdateClick, exchangeRate, s
         </div>
         <button 
           className="update-card-btn"
+          disabled={!isUnlocked}
+          style={{ opacity: !isUnlocked ? 0.5 : 1, cursor: !isUnlocked ? 'not-allowed' : 'pointer' }}
           onClick={() => onUpdateClick(stock)}
         >
           <i className="fa-solid fa-pen-to-square" style={{ fontSize: '14px' }}></i>
