@@ -55,6 +55,9 @@ function App() {
   const [viewMode, setViewMode] = useState('list');
   const [isPinPopoverOpen, setIsPinPopoverOpen] = useState(false);
 
+  const [globalExpandCount, setGlobalExpandCount] = useState(0);
+  const [isGlobalExpanded, setIsGlobalExpanded] = useState(false);
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -840,6 +843,21 @@ function App() {
               {sortOrder === 'asc' ? <i className="fa-solid fa-arrow-up-wide-short" style={{ fontSize: '16px' }}></i> : <i className="fa-solid fa-arrow-down-wide-short" style={{ fontSize: '16px' }}></i>}
             </button>
           </div>
+          <button
+            type="button"
+            className="sort-container hover-opacity"
+            style={{ 
+              width: '38px', height: '38px', padding: 0, justifyContent: 'center', cursor: 'pointer',
+              color: 'var(--text-main)', border: '1px solid var(--surface-border)'
+            }}
+            onClick={() => {
+              setIsGlobalExpanded(!isGlobalExpanded);
+              setGlobalExpandCount(prev => prev + 1);
+            }}
+            title={isGlobalExpanded ? 'ย่อทั้งหมด' : 'ขยายทั้งหมด'}
+          >
+            <i className={`fa-solid fa-chevron-${isGlobalExpanded ? 'up' : 'down'}`} style={{ fontSize: '14px' }}></i>
+          </button>
         </div>
       </div>
 
@@ -864,6 +882,8 @@ function App() {
                   exchangeRate={exchangeRate}
                   showAmounts={showAmounts}
                   isUnlocked={isUnlocked}
+                  globalExpandCount={globalExpandCount}
+                  isGlobalExpanded={isGlobalExpanded}
                 />
               ))
             ) : (

@@ -446,10 +446,10 @@ h1 {
 
 /* Stock Card Expanded */
 .stock-card-expanded {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
   transition: all 0.2s ease;
 }
 
@@ -466,7 +466,7 @@ h1 {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 0.875rem;
+  gap: 0.5rem;
 }
 
 .stock-details-grid {
@@ -517,6 +517,8 @@ h1 {
 .time-warning-1 .relative-time { background: #fef9c3; color: #854d0e; border: 1px solid rgba(133, 77, 14, 0.15); }
 .time-warning-2 .relative-time { background: #ffedd5; color: #9a3412; border: 1px solid rgba(154, 52, 18, 0.15); }
 .time-danger .relative-time { background: #fee2e2; color: #991b1b; border: 1px solid rgba(153, 27, 27, 0.15); }
+.time-blue .relative-time { background: #dbeafe; color: #1e40af; border: 1px solid rgba(30, 64, 175, 0.15); }
+.time-yellow .relative-time { background: #fef9c3; color: #a16207; border: 1px solid rgba(161, 98, 7, 0.15); }
 
 .status-grey .detail-value { color: #94a3b8; }
 .status-red .detail-value { color: #dc2626; }
@@ -1142,9 +1144,9 @@ h1 {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  padding-top: 0.625rem;
+  padding-top: 0.375rem;
   border-top: 1px solid var(--surface-border);
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 .update-card-btn {

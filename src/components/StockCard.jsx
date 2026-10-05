@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import InteractiveTime from './InteractiveTime';
 import { parseNumber, formatCurrency, maskFormattedMoney, calculateTargetAmount, parsePercentChange } from '../utils/numberUtils';
 import { getHoldingAge, getTimeColor } from '../utils/dateUtils';
 
-export default function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts, isUnlocked }) {
+export default function StockCard({ stock, index, onUpdateClick, exchangeRate, showAmounts, isUnlocked, globalExpandCount, isGlobalExpanded }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [logoError, setLogoError] = useState(false);
+
+  useEffect(() => {
+    if (globalExpandCount > 0) {
+      setIsExpanded(isGlobalExpanded);
+    }
+  }, [globalExpandCount, isGlobalExpanded]);
   const ticker = stock["ชื่อหุ้น"];
   const logoUrl = `https://assets.parqet.com/logos/symbol/${ticker}?format=png`;
   const tvMarket = (stock["ตลาด"] || '').trim().toUpperCase();
@@ -314,7 +321,8 @@ export default function StockCard({ stock, index, onUpdateClick, exchangeRate, s
           </div>
         </div>
 
-        <div className="stock-stats" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.375rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="stock-stats" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.375rem' }}>
           <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
             {(() => {
               const clearRateVal = parseFloat(stock["อัตรากำจัด (%)"]) || parseFloat(stock["clear_rate"]) || 0;
@@ -403,9 +411,29 @@ export default function StockCard({ stock, index, onUpdateClick, exchangeRate, s
             })()}
           </div>
         </div>
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          style={{ 
+            background: 'transparent', border: 'none', cursor: 'pointer', 
+            padding: '0.5rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}
+          title={isExpanded ? 'ย่อข้อมูล' : 'ขยายข้อมูล'}
+        >
+          <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'}`} style={{ fontSize: '1rem' }}></i>
+        </button>
+      </div>
       </div>
 
-      <div className="stock-details-grid">
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="stock-details-grid">
         <DetailItem label="ราคาตั้งซื้อ" value={stock["ราคาตั้งซื้อ ($)"]} isMoney={true} colorClass={getBinaryColorClass(stock["ราคาตั้งซื้อ ($)"])} />
         <DetailItem label="ยอดตั้งซื้อ" value={remainingTarget} isMoney={true} colorClass={getBinaryColorClass(remainingTarget)} />
         <DetailItem label="ยอดตั้งกำจัด" value={targetClearAmount} isMoney={true} colorClass={getBinaryColorClass(targetClearAmount)} />
@@ -418,6 +446,9 @@ export default function StockCard({ stock, index, onUpdateClick, exchangeRate, s
         <DetailItem label="กำไรรวม" value={grossProfit} isMoney={true} colorClass={getStatusColor(grossProfit)} percent={grossProfitPercent} />
         <DetailItem label="กำไรสุทธิ" value={netIncome} isMoney={true} colorClass={getStatusColor(netIncome)} percent={netIncomePercent} />
       </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="stock-card-footer" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -447,6 +478,8 @@ export default function StockCard({ stock, index, onUpdateClick, exchangeRate, s
             dateStr={stock["วันที่ซื้อล่าสุด"]} 
             colorClass={getTimeColor(stock["วันที่ซื้อล่าสุด"])} 
           />
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           {stock["วันที่ขายล่าสุด"] && (
             <InteractiveTime 
               label="ขายล่าสุด" 
@@ -457,7 +490,7 @@ export default function StockCard({ stock, index, onUpdateClick, exchangeRate, s
             <InteractiveTime 
               label="ปันผลล่าสุด" 
               dateStr={stock["วันที่ปันผลล่าสุด"]} 
-              colorClass={getTimeColor(stock["วันที่ปันผลล่าสุด"])} 
+              colorClass="time-blue"
             />
           )}
           {(stock["วันที่กำจัดล่าสุด"] || stock["last_clear_date"]) && (
@@ -466,16 +499,16 @@ export default function StockCard({ stock, index, onUpdateClick, exchangeRate, s
               dateStr={stock["วันที่กำจัดล่าสุด"] || stock["last_clear_date"]} 
             />
           )}
+            <button 
+              className="update-card-btn"
+              disabled={!isUnlocked}
+              style={{ opacity: !isUnlocked ? 0.5 : 1, cursor: !isUnlocked ? 'not-allowed' : 'pointer' }}
+              onClick={() => onUpdateClick(stock)}
+            >
+              <i className="fa-solid fa-pen-to-square" style={{ fontSize: '14px' }}></i>
+              อัปเดต
+            </button>
         </div>
-        <button 
-          className="update-card-btn"
-          disabled={!isUnlocked}
-          style={{ opacity: !isUnlocked ? 0.5 : 1, cursor: !isUnlocked ? 'not-allowed' : 'pointer' }}
-          onClick={() => onUpdateClick(stock)}
-        >
-          <i className="fa-solid fa-pen-to-square" style={{ fontSize: '14px' }}></i>
-          อัปเดต
-        </button>
       </div>
     </motion.div>
   );
