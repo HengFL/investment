@@ -55,6 +55,12 @@ function App() {
   const [viewMode, setViewMode] = useState('list');
   const [isPinPopoverOpen, setIsPinPopoverOpen] = useState(false);
 
+  useEffect(() => {
+    if (!isUnlocked && viewMode === 'chart') {
+      setViewMode('list');
+    }
+  }, [isUnlocked, viewMode]);
+
   const [globalExpandCount, setGlobalExpandCount] = useState(0);
   const [isGlobalExpanded, setIsGlobalExpanded] = useState(false);
 
@@ -393,6 +399,7 @@ function App() {
                   localStorage.removeItem('show_amounts');
                   setIsUnlocked(false);
                   setShowAmounts(false);
+                  setViewMode('list');
                 }
               }}
               title={isUnlocked ? "ล็อคข้อมูล" : "ปลดล็อคข้อมูล"}
@@ -761,8 +768,13 @@ function App() {
           </button>
           <button 
             className={`view-toggle-btn ${viewMode === 'chart' ? 'active' : ''}`}
-            onClick={() => setViewMode('chart')}
-            title="Chart View"
+            onClick={() => isUnlocked && setViewMode('chart')}
+            disabled={!isUnlocked}
+            title={!isUnlocked ? "กรุณาใส่ PIN เพื่อปลดล็อคก่อนดู Chart" : "Chart View"}
+            style={{
+              opacity: !isUnlocked ? 0.4 : 1,
+              cursor: !isUnlocked ? 'not-allowed' : 'pointer'
+            }}
           >
             <i className="fa-solid fa-chart-pie"></i>
           </button>
@@ -867,7 +879,7 @@ function App() {
           <div style={{ textAlign: 'center', padding: '3rem' }}>
             <p className="text-muted">กำลังโหลดข้อมูล...</p>
           </div>
-        ) : viewMode === 'chart' ? (
+        ) : (viewMode === 'chart' && isUnlocked) ? (
           <AssetCharts data={sortedData} />
         ) : (
           <div className="stock-list">

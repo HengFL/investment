@@ -729,7 +729,7 @@ h1 {
   transition: all 0.2s ease;
 }
 
-.view-toggle-btn:hover {
+.view-toggle-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.5);
   color: var(--text-main);
 }
@@ -741,8 +741,13 @@ h1 {
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.view-toggle-btn:active {
+.view-toggle-btn:active:not(:disabled) {
   transform: scale(0.95);
+}
+
+.view-toggle-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 /* Animations */
